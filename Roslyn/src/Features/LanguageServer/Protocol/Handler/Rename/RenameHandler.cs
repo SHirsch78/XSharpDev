@@ -3,24 +3,22 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Editor;
 using Microsoft.CodeAnalysis.Host.Mef;
-using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Shared.Extensions;
-using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Roslyn.Utilities;
 using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Microsoft.CodeAnalysis.LanguageServer.Handler
 {
-    [ExportLspMethod(LSP.Methods.TextDocumentRenameName, mutatesSolutionState: false), Shared]
-    internal class RenameHandler : IRequestHandler<LSP.RenameParams, WorkspaceEdit?>
+    [ExportRoslynLanguagesLspRequestHandlerProvider, Shared]
+    [ProvidesMethod(LSP.Methods.TextDocumentRenameName)]
+    internal class RenameHandler : AbstractStatelessRequestHandler<LSP.RenameParams, WorkspaceEdit?>
     {
         [ImportingConstructor]
         [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
@@ -28,9 +26,14 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
         {
         }
 
-        public TextDocumentIdentifier? GetTextDocumentIdentifier(RenameParams request) => request.TextDocument;
+        public override string Method => LSP.Methods.TextDocumentRenameName;
 
-        public async Task<WorkspaceEdit?> HandleRequestAsync(RenameParams request, RequestContext context, CancellationToken cancellationToken)
+        public override bool MutatesSolutionState => false;
+        public override bool RequiresLSPSolution => true;
+
+        public override TextDocumentIdentifier? GetTextDocumentIdentifier(RenameParams request) => request.TextDocument;
+
+        public override async Task<WorkspaceEdit?> HandleRequestAsync(RenameParams request, RequestContext context, CancellationToken cancellationToken)
         {
             var document = context.Document;
             if (document != null)
@@ -45,8 +48,8 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
                     return null;
                 }
 
-                var renameLocationSet = await renameInfo.FindRenameLocationsAsync(oldSolution.Workspace.Options, cancellationToken).ConfigureAwait(false);
-                var renameReplacementInfo = await renameLocationSet.GetReplacementsAsync(request.NewName, oldSolution.Workspace.Options, cancellationToken).ConfigureAwait(false);
+                var renameLocationSet = await renameInfo.FindRenameLocationsAsync(oldSolution.Options, cancellationToken).ConfigureAwait(false);
+                var renameReplacementInfo = await renameLocationSet.GetReplacementsAsync(request.NewName, oldSolution.Options, cancellationToken).ConfigureAwait(false);
 
                 var renamedSolution = renameReplacementInfo.NewSolution;
                 var solutionChanges = renamedSolution.GetChanges(oldSolution);

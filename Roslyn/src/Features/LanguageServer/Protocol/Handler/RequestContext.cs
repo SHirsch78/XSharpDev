@@ -4,14 +4,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
-using Microsoft.CodeAnalysis.Internal.Log;
+using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.Shared.Collections;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
+using Roslyn.Utilities;
 using static Microsoft.CodeAnalysis.LanguageServer.Handler.RequestExecutionQueue;
-using Logger = Microsoft.CodeAnalysis.Internal.Log.Logger;
 
 namespace Microsoft.CodeAnalysis.LanguageServer.Handler
 {
@@ -20,14 +21,76 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
     /// </summary>
     internal readonly struct RequestContext
     {
+        /// <summary>
+        /// This will be null for non-mutating requests because they're not allowed to change documents
+        /// </summary>
+        private readonly IDocumentChangeTracker _documentChangeTracker;
+
+        /// <summary>
+        /// The solution state that the request should operate on, if the handler requires an LSP solution, or <see langword="null"/> otherwise
+        /// </summary>
+        public readonly Solution? Solution;
+
+        /// <summary>
+        /// The client capabilities for the request.
+        /// </summary>
+        public readonly ClientCapabilities ClientCapabilities;
+
+        /// <summary>
+        /// The LSP client making the request
+        /// </summary>
+        public readonly string? ClientName;
+
+        /// <summary>
+        /// The document that the request is for, if applicable. This comes from the <see cref="TextDocumentIdentifier"/> returned from the handler itself via a call to <see cref="IRequestHandler{RequestType, ResponseType}.GetTextDocumentIdentifier(RequestType)"/>.
+        /// </summary>
+        public readonly Document? Document;
+
+        /// <summary>
+        /// The languages supported by the server making the request.
+        /// </summary>
+        public readonly ImmutableArray<string> SupportedLanguages;
+
+        public readonly IGlobalOptionService GlobalOptions;
+
+        /// <summary>
+        /// Tracing object that can be used to log information about the status of requests.
+        /// </summary>
+        private readonly Action<string> _traceInformation;
+
+        public RequestContext(
+            Solution? solution,
+            Action<string> traceInformation,
+            ClientCapabilities clientCapabilities,
+            string? clientName,
+            Document? document,
+            IDocumentChangeTracker documentChangeTracker,
+            ImmutableArray<string> supportedLanguages,
+            IGlobalOptionService globalOptions)
+        {
+            Document = document;
+            Solution = solution;
+            ClientCapabilities = clientCapabilities;
+            ClientName = clientName;
+            SupportedLanguages = supportedLanguages;
+            GlobalOptions = globalOptions;
+            _documentChangeTracker = documentChangeTracker;
+            _traceInformation = traceInformation;
+        }
+
         public static RequestContext Create(
+            bool requiresLSPSolution,
             TextDocumentIdentifier? textDocument,
             string? clientName,
-            ILspLogger _logger,
+            ILspLogger logger,
+            RequestTelemetryLogger telemetryLogger,
             ClientCapabilities clientCapabilities,
             ILspWorkspaceRegistrationService lspWorkspaceRegistrationService,
             Dictionary<Workspace, (Solution workspaceSolution, Solution lspSolution)>? solutionCache,
-            IDocumentChangeTracker? documentChangeTracker)
+            IDocumentChangeTracker? documentChangeTracker,
+            ImmutableArray<string> supportedLanguages,
+            IGlobalOptionService globalOptions,
+            out Workspace workspace)
         {
             // Go through each registered workspace, find the solution that contains the document that
             // this request is for, and then updates it based on the state of the world as we know it, based on the
@@ -40,14 +103,14 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
             // If we were given a document, find it in whichever workspace it exists in
             if (textDocument is null)
             {
-                _logger.TraceInformation("Request contained no document id");
+                logger.TraceInformation("Request contained no text document identifier");
             }
             else
             {
                 // There are multiple possible solutions that we could be interested in, so we need to find the document
                 // first and then get the solution from there. If we're not given a document, this will return the default
                 // solution
-                document = FindDocument(_logger, lspWorkspaceRegistrationService, textDocument, clientName);
+                document = FindDocument(logger, telemetryLogger, lspWorkspaceRegistrationService, textDocument, clientName);
 
                 if (document is not null)
                 {
@@ -58,6 +121,16 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
 
             documentChangeTracker ??= new NoOpDocumentChangeTracker();
 
+            // If the handler doesn't need an LSP solution we do two important things:
+            // 1. We don't bother building the LSP solution for perf reasons
+            // 2. We explicitly don't give the handler a solution or document, even if we could
+            //    so they're not accidentally operating on stale solution state.
+            if (!requiresLSPSolution)
+            {
+                workspace = workspaceSolution.Workspace;
+                return new RequestContext(solution: null, logger.TraceInformation, clientCapabilities, clientName, document: null, documentChangeTracker, supportedLanguages, globalOptions);
+            }
+
             var lspSolution = BuildLSPSolution(solutionCache, workspaceSolution, documentChangeTracker);
 
             // If we got a document back, we need pull it out of our updated solution so the handler is operating on the
@@ -67,10 +140,16 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
                 document = lspSolution.GetRequiredDocument(document.Id);
             }
 
-            return new RequestContext(lspSolution, _logger.TraceInformation, clientCapabilities, clientName, document, documentChangeTracker);
+            workspace = lspSolution.Workspace;
+            return new RequestContext(lspSolution, logger.TraceInformation, clientCapabilities, clientName, document, documentChangeTracker, supportedLanguages, globalOptions);
         }
 
-        private static Document? FindDocument(ILspLogger logger, ILspWorkspaceRegistrationService lspWorkspaceRegistrationService, TextDocumentIdentifier textDocument, string? clientName)
+        private static Document? FindDocument(
+            ILspLogger logger,
+            RequestTelemetryLogger telemetryLogger,
+            ILspWorkspaceRegistrationService lspWorkspaceRegistrationService,
+            TextDocumentIdentifier textDocument,
+            string? clientName)
         {
             logger.TraceInformation($"Finding document corresponding to {textDocument.Uri}");
 
@@ -78,33 +157,21 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
             foreach (var workspace in lspWorkspaceRegistrationService.GetAllRegistrations())
             {
                 workspaceKinds.Add(workspace.Kind);
-                var documents = workspace.CurrentSolution.GetDocuments(textDocument.Uri, clientName);
+                var documents = workspace.CurrentSolution.GetDocuments(textDocument.Uri, clientName, logger);
 
                 if (!documents.IsEmpty)
                 {
                     var document = documents.FindDocumentInProjectContext(textDocument);
                     logger.TraceInformation($"Found document in workspace {workspace.Kind}: {document.FilePath}");
-
-                    Logger.Log(FunctionId.FindDocumentInWorkspace, KeyValueLogMessage.Create(LogType.Trace, m =>
-                    {
-                        m["WorkspaceKind"] = workspace.Kind;
-                        m["FoundInWorkspace"] = true;
-                        m["DocumentUriHashCode"] = textDocument.Uri.GetHashCode();
-                    }));
-
+                    telemetryLogger.UpdateFindDocumentTelemetryData(success: true, workspace.Kind);
                     return document;
                 }
             }
 
             var searchedWorkspaceKinds = string.Join(";", workspaceKinds.ToImmutableAndClear());
-            logger.TraceWarning($"No document found after looking in {searchedWorkspaceKinds} workspaces, but request did contain a document uri");
+            logger.TraceWarning($"No document found for '{textDocument.Uri}' after looking in {searchedWorkspaceKinds} workspaces, with client name '{clientName}'.");
 
-            Logger.Log(FunctionId.FindDocumentInWorkspace, KeyValueLogMessage.Create(LogType.Trace, m =>
-            {
-                m["AvailableWorkspaceKinds"] = searchedWorkspaceKinds;
-                m["FoundInWorkspace"] = false;
-                m["DocumentUriHashCode"] = textDocument.Uri.GetHashCode();
-            }));
+            telemetryLogger.UpdateFindDocumentTelemetryData(success: false, workspaceKind: null);
 
             return null;
         }
@@ -118,7 +185,7 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
             var workspace = workspaceSolution.Workspace;
 
             // If we have a cached solution we can use it, unless the workspace solution it was based on
-            // is not the current one. 
+            // is not the current one.
             if (solutionCache is null ||
                 !solutionCache.TryGetValue(workspace, out var cacheInfo) ||
                 workspaceSolution != cacheInfo.workspaceSolution)
@@ -158,52 +225,6 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
         }
 
         /// <summary>
-        /// This will be null for non-mutating requests because they're not allowed to change documents
-        /// </summary>
-        private readonly IDocumentChangeTracker _documentChangeTracker;
-
-        /// <summary>
-        /// The solution state that the request should operate on.
-        /// </summary>
-        public readonly Solution Solution;
-
-        /// <summary>
-        /// The client capabilities for the request.
-        /// </summary>
-        public readonly ClientCapabilities ClientCapabilities;
-
-        /// <summary>
-        /// The LSP client making the request
-        /// </summary>
-        public readonly string? ClientName;
-
-        /// <summary>
-        /// The document that the request is for, if applicable. This comes from the <see cref="TextDocumentIdentifier"/> returned from the handler itself via a call to <see cref="IRequestHandler{RequestType, ResponseType}.GetTextDocumentIdentifier(RequestType)"/>.
-        /// </summary>
-        public readonly Document? Document;
-
-        /// <summary>
-        /// Tracing object that can be used to log information about the status of requests.
-        /// </summary>
-        private readonly Action<string> _traceInformation;
-
-        public RequestContext(
-            Solution solution,
-            Action<string> traceInformation,
-            ClientCapabilities clientCapabilities,
-            string? clientName,
-            Document? document,
-            IDocumentChangeTracker documentChangeTracker)
-        {
-            Document = document;
-            Solution = solution;
-            ClientCapabilities = clientCapabilities;
-            ClientName = clientName;
-            _documentChangeTracker = documentChangeTracker;
-            _traceInformation = traceInformation;
-        }
-
-        /// <summary>
         /// Allows a mutating request to open a document and start it being tracked.
         /// </summary>
         public void StartTracking(Uri documentUri, SourceText initialText)
@@ -214,6 +235,9 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
         /// </summary>
         public void UpdateTrackedDocument(Uri documentUri, SourceText changedText)
             => _documentChangeTracker.UpdateTrackedDocument(documentUri, changedText);
+
+        public SourceText GetTrackedDocumentSourceText(Uri documentUri)
+            => _documentChangeTracker.GetTrackedDocumentSourceText(documentUri);
 
         /// <summary>
         /// Allows a mutating request to close a document and stop it being tracked.
@@ -234,6 +258,8 @@ namespace Microsoft.CodeAnalysis.LanguageServer.Handler
         {
             public IEnumerable<(Uri DocumentUri, SourceText Text)> GetTrackedDocuments()
                 => Enumerable.Empty<(Uri DocumentUri, SourceText Text)>();
+
+            public SourceText GetTrackedDocumentSourceText(Uri documentUri) => null!;
 
             public bool IsTracking(Uri documentUri) => false;
             public void StartTracking(Uri documentUri, SourceText initialText) { }

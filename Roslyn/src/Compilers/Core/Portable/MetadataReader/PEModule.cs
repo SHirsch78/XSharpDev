@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -83,8 +84,9 @@ namespace Microsoft.CodeAnalysis
         // algorithm.
         private readonly CryptographicHashProvider _hashesOpt;
 
+#nullable enable
         private delegate bool AttributeValueExtractor<T>(out T value, ref BlobReader sigReader);
-        private static readonly AttributeValueExtractor<string> s_attributeStringValueExtractor = CrackStringInAttributeValue;
+        private static readonly AttributeValueExtractor<string?> s_attributeStringValueExtractor = CrackStringInAttributeValue;
         private static readonly AttributeValueExtractor<StringAndInt> s_attributeStringAndIntValueExtractor = CrackStringAndIntInAttributeValue;
         private static readonly AttributeValueExtractor<bool> s_attributeBooleanValueExtractor = CrackBooleanInAttributeValue;
         private static readonly AttributeValueExtractor<byte> s_attributeByteValueExtractor = CrackByteInAttributeValue;
@@ -95,34 +97,35 @@ namespace Microsoft.CodeAnalysis
         private static readonly AttributeValueExtractor<decimal> s_decimalValueInDecimalConstantAttributeExtractor = CrackDecimalInDecimalConstantAttribute;
         private static readonly AttributeValueExtractor<ImmutableArray<bool>> s_attributeBoolArrayValueExtractor = CrackBoolArrayInAttributeValue;
         private static readonly AttributeValueExtractor<ImmutableArray<byte>> s_attributeByteArrayValueExtractor = CrackByteArrayInAttributeValue;
-        private static readonly AttributeValueExtractor<ImmutableArray<string>> s_attributeStringArrayValueExtractor = CrackStringArrayInAttributeValue;
-        private static readonly AttributeValueExtractor<ObsoleteAttributeData> s_attributeDeprecatedDataExtractor = CrackDeprecatedAttributeData;
+        private static readonly AttributeValueExtractor<ImmutableArray<string?>> s_attributeStringArrayValueExtractor = CrackStringArrayInAttributeValue;
+        private static readonly AttributeValueExtractor<ObsoleteAttributeData?> s_attributeDeprecatedDataExtractor = CrackDeprecatedAttributeData;
         private static readonly AttributeValueExtractor<BoolAndStringArrayData> s_attributeBoolAndStringArrayValueExtractor = CrackBoolAndStringArrayInAttributeValue;
         private static readonly AttributeValueExtractor<BoolAndStringData> s_attributeBoolAndStringValueExtractor = CrackBoolAndStringInAttributeValue;
 
         internal struct BoolAndStringArrayData
         {
-            public BoolAndStringArrayData(bool sense, ImmutableArray<string> strings)
+            public BoolAndStringArrayData(bool sense, ImmutableArray<string?> strings)
             {
                 Sense = sense;
                 Strings = strings;
             }
 
             public readonly bool Sense;
-            public readonly ImmutableArray<string> Strings;
+            public readonly ImmutableArray<string?> Strings;
         }
 
         internal struct BoolAndStringData
         {
-            public BoolAndStringData(bool sense, string @string)
+            public BoolAndStringData(bool sense, string? @string)
             {
                 Sense = sense;
                 String = @string;
             }
 
             public readonly bool Sense;
-            public readonly string String;
+            public readonly string? String;
         }
+#nullable disable
 
         // 'ignoreAssemblyRefs' is used by the EE only, when debugging
         // .NET Native, where the corlib may have assembly references
@@ -1001,6 +1004,11 @@ namespace Microsoft.CodeAnalysis
         {
             return FindTargetAttribute(token, AttributeDescription.CodeAnalysisEmbeddedAttribute).HasValue;
         }
+        internal bool HasInterpolatedStringHandlerAttribute(EntityHandle token)
+        {
+            return FindTargetAttribute(token, AttributeDescription.InterpolatedStringHandlerAttribute).HasValue;
+        }
+
 #if XSHARP
         internal bool HasCompilerGeneratedAttribute(EntityHandle token)
         {
@@ -1186,6 +1194,31 @@ namespace Microsoft.CodeAnalysis
 
             return UnmanagedCallersOnlyAttributeData.Create(unmanagedConventionTypes);
         }
+
+        internal (ImmutableArray<string?> Names, bool FoundAttribute) GetInterpolatedStringHandlerArgumentAttributeValues(EntityHandle token)
+        {
+            var targetAttribute = FindTargetAttribute(token, AttributeDescription.InterpolatedStringHandlerArgumentAttribute);
+            if (!targetAttribute.HasValue)
+            {
+                return (default, false);
+            }
+
+            Debug.Assert(AttributeDescription.InterpolatedStringHandlerArgumentAttribute.Signatures.Length == 2);
+            Debug.Assert(targetAttribute.SignatureIndex is 0 or 1);
+            if (targetAttribute.SignatureIndex == 0)
+            {
+                if (TryExtractStringValueFromAttribute(targetAttribute.Handle, out string? paramName))
+                {
+                    return (ImmutableArray.Create(paramName), true);
+                }
+            }
+            else if (TryExtractStringArrayValueFromAttribute(targetAttribute.Handle, out var paramNames))
+            {
+                return (paramNames.NullToEmpty(), true);
+            }
+
+            return (default, true);
+        }
 #nullable disable
 
         internal bool HasMaybeNullWhenOrNotNullWhenOrDoesNotReturnIfAttribute(EntityHandle token, AttributeDescription description, out bool when)
@@ -1202,6 +1235,27 @@ namespace Microsoft.CodeAnalysis
             }
             when = false;
             return false;
+        }
+
+        internal ImmutableHashSet<string> GetStringValuesOfNotNullIfNotNullAttribute(EntityHandle token)
+        {
+            var attributeInfos = FindTargetAttributes(token, AttributeDescription.NotNullIfNotNullAttribute);
+
+            var result = ImmutableHashSet<string>.Empty;
+            if (attributeInfos is null)
+            {
+                return result;
+            }
+
+            foreach (var attributeInfo in attributeInfos)
+            {
+                if (TryExtractStringValueFromAttribute(attributeInfo.Handle, out string parameterName))
+                {
+                    result = result.Add(parameterName);
+                }
+            }
+
+            return result;
         }
 
         internal CustomAttributeHandle GetAttributeUsageAttributeHandle(EntityHandle token)
@@ -1593,7 +1647,8 @@ namespace Microsoft.CodeAnalysis
             return false;
         }
 
-        internal bool TryExtractStringValueFromAttribute(CustomAttributeHandle handle, out string value)
+#nullable enable
+        internal bool TryExtractStringValueFromAttribute(CustomAttributeHandle handle, out string? value)
         {
             return TryExtractValueFromAttribute(handle, out value, s_attributeStringValueExtractor);
         }
@@ -1611,11 +1666,11 @@ namespace Microsoft.CodeAnalysis
 
         private struct StringAndInt
         {
-            public string StringValue;
+            public string? StringValue;
             public int IntValue;
         }
 
-        private bool TryExtractStringAndIntValueFromAttribute(CustomAttributeHandle handle, out string stringValue, out int intValue)
+        private bool TryExtractStringAndIntValueFromAttribute(CustomAttributeHandle handle, out string? stringValue, out int intValue)
         {
             StringAndInt data;
             var result = TryExtractValueFromAttribute(handle, out data, s_attributeStringAndIntValueExtractor);
@@ -1634,12 +1689,12 @@ namespace Microsoft.CodeAnalysis
             return TryExtractValueFromAttribute(handle, out value, s_attributeByteArrayValueExtractor);
         }
 
-        private bool TryExtractStringArrayValueFromAttribute(CustomAttributeHandle handle, out ImmutableArray<string> value)
+        private bool TryExtractStringArrayValueFromAttribute(CustomAttributeHandle handle, out ImmutableArray<string?> value)
         {
             return TryExtractValueFromAttribute(handle, out value, s_attributeStringArrayValueExtractor);
         }
 
-        private bool TryExtractValueFromAttribute<T>(CustomAttributeHandle handle, out T value, AttributeValueExtractor<T> valueExtractor)
+        private bool TryExtractValueFromAttribute<T>(CustomAttributeHandle handle, out T? value, AttributeValueExtractor<T?> valueExtractor)
         {
             Debug.Assert(!handle.IsNil);
 
@@ -1669,6 +1724,7 @@ namespace Microsoft.CodeAnalysis
             value = default(T);
             return false;
         }
+#nullable disable
 
         internal bool HasStringValuedAttribute(EntityHandle token, AttributeDescription description, out string value)
         {
@@ -1797,9 +1853,8 @@ namespace Microsoft.CodeAnalysis
 
             return (diagnosticId, urlFormat);
         }
-#nullable disable
 
-        private static bool CrackDeprecatedAttributeData(out ObsoleteAttributeData value, ref BlobReader sig)
+        private static bool CrackDeprecatedAttributeData([NotNullWhen(true)] out ObsoleteAttributeData? value, ref BlobReader sig)
         {
             StringAndInt args;
             if (CrackStringAndIntInAttributeValue(out args, ref sig))
@@ -1820,7 +1875,7 @@ namespace Microsoft.CodeAnalysis
                 CrackIntInAttributeValue(out value.IntValue, ref sig);
         }
 
-        internal static bool CrackStringInAttributeValue(out string value, ref BlobReader sig)
+        internal static bool CrackStringInAttributeValue(out string? value, ref BlobReader sig)
         {
             try
             {
@@ -1848,12 +1903,12 @@ namespace Microsoft.CodeAnalysis
             }
         }
 
-        internal static bool CrackStringArrayInAttributeValue(out ImmutableArray<string> value, ref BlobReader sig)
+        internal static bool CrackStringArrayInAttributeValue(out ImmutableArray<string?> value, ref BlobReader sig)
         {
             if (sig.RemainingBytes >= 4)
             {
                 uint arrayLen = sig.ReadUInt32();
-                var stringArray = new string[arrayLen];
+                var stringArray = new string?[arrayLen];
                 for (int i = 0; i < arrayLen; i++)
                 {
                     if (!CrackStringInAttributeValue(out stringArray[i], ref sig))
@@ -1867,14 +1922,14 @@ namespace Microsoft.CodeAnalysis
                 return true;
             }
 
-            value = default(ImmutableArray<string>);
+            value = default;
             return false;
         }
 
         internal static bool CrackBoolAndStringArrayInAttributeValue(out BoolAndStringArrayData value, ref BlobReader sig)
         {
             if (CrackBooleanInAttributeValue(out bool sense, ref sig) &&
-                CrackStringArrayInAttributeValue(out ImmutableArray<string> strings, ref sig))
+                CrackStringArrayInAttributeValue(out ImmutableArray<string?> strings, ref sig))
             {
                 value = new BoolAndStringArrayData(sense, strings);
                 return true;
@@ -1887,7 +1942,7 @@ namespace Microsoft.CodeAnalysis
         internal static bool CrackBoolAndStringInAttributeValue(out BoolAndStringData value, ref BlobReader sig)
         {
             if (CrackBooleanInAttributeValue(out bool sense, ref sig) &&
-                CrackStringInAttributeValue(out string @string, ref sig))
+                CrackStringInAttributeValue(out string? @string, ref sig))
             {
                 value = new BoolAndStringData(sense, @string);
                 return true;
@@ -2023,6 +2078,7 @@ namespace Microsoft.CodeAnalysis
             value = default(ImmutableArray<byte>);
             return false;
         }
+#nullable disable
 
         internal struct AttributeInfo
         {
@@ -2069,7 +2125,7 @@ namespace Microsoft.CodeAnalysis
             return result;
         }
 
-        private AttributeInfo FindTargetAttribute(EntityHandle hasAttribute, AttributeDescription description)
+        internal AttributeInfo FindTargetAttribute(EntityHandle hasAttribute, AttributeDescription description)
         {
             return FindTargetAttribute(MetadataReader, hasAttribute, description);
         }
@@ -2770,9 +2826,9 @@ namespace Microsoft.CodeAnalysis
             return TryExtractByteArrayValueFromAttribute(info.Handle, out nullableTransforms);
         }
 
-#endregion
+        #endregion
 
-#region TypeSpec helpers
+        #region TypeSpec helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal BlobReader GetTypeSpecificationSignatureReaderOrThrow(TypeSpecificationHandle typeSpec)
@@ -2784,9 +2840,9 @@ namespace Microsoft.CodeAnalysis
             return MetadataReader.GetBlobReader(signature);
         }
 
-#endregion
+        #endregion
 
-#region MethodSpec helpers
+        #region MethodSpec helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal void GetMethodSpecificationOrThrow(MethodSpecificationHandle handle, out EntityHandle method, out BlobHandle instantiation)
@@ -2796,9 +2852,9 @@ namespace Microsoft.CodeAnalysis
             instantiation = methodSpec.Signature;
         }
 
-#endregion
+        #endregion
 
-#region GenericParam helpers
+        #region GenericParam helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal void GetGenericParamPropsOrThrow(
@@ -2811,9 +2867,9 @@ namespace Microsoft.CodeAnalysis
             flags = row.Attributes;
         }
 
-#endregion
+        #endregion
 
-#region MethodDef helpers
+        #region MethodDef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal string GetMethodDefNameOrThrow(MethodDefinitionHandle methodDef)
@@ -2941,9 +2997,9 @@ namespace Microsoft.CodeAnalysis
             }
         }
 
-#endregion
+        #endregion
 
-#region MemberRef helpers
+        #region MemberRef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         public string GetMemberRefNameOrThrow(MemberReferenceHandle memberRef)
@@ -2982,9 +3038,9 @@ namespace Microsoft.CodeAnalysis
             signature = MetadataReader.GetBlobBytes(row.Signature);
         }
 
-#endregion MemberRef helpers
+        #endregion MemberRef helpers
 
-#region ParamDef helpers
+        #region ParamDef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal void GetParamPropsOrThrow(
@@ -3010,9 +3066,9 @@ namespace Microsoft.CodeAnalysis
             return MetadataReader.GetParameter(param).SequenceNumber;
         }
 
-#endregion
+        #endregion
 
-#region PropertyDef helpers
+        #region PropertyDef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal string GetPropertyDefNameOrThrow(PropertyDefinitionHandle propertyDef)
@@ -3037,9 +3093,9 @@ namespace Microsoft.CodeAnalysis
             flags = property.Attributes;
         }
 
-#endregion
+        #endregion
 
-#region EventDef helpers
+        #region EventDef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         internal string GetEventDefNameOrThrow(EventDefinitionHandle eventDef)
@@ -3060,9 +3116,9 @@ namespace Microsoft.CodeAnalysis
             type = eventRow.Type;
         }
 
-#endregion
+        #endregion
 
-#region FieldDef helpers
+        #region FieldDef helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         public string GetFieldDefNameOrThrow(FieldDefinitionHandle fieldDef)
@@ -3128,9 +3184,9 @@ namespace Microsoft.CodeAnalysis
             }
         }
 
-#endregion
+        #endregion
 
-#region Attribute Helpers
+        #region Attribute Helpers
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         public CustomAttributeHandleCollection GetCustomAttributesOrThrow(EntityHandle handle)
@@ -3144,7 +3200,7 @@ namespace Microsoft.CodeAnalysis
             return MetadataReader.GetCustomAttribute(handle).Value;
         }
 
-#endregion
+        #endregion
 
         /// <exception cref="BadImageFormatException">An exception from metadata reader.</exception>
         private BlobHandle GetMarshallingDescriptorHandleOrThrow(EntityHandle fieldOrParameterToken)

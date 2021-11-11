@@ -313,6 +313,8 @@ namespace Microsoft.CodeAnalysis
 
         System_Text_StringBuilder,
 
+        System_Runtime_CompilerServices_DefaultInterpolatedStringHandler,
+
 #if XSHARP
         System_Runtime_CompilerServices_IsConst,
         System_Runtime_InteropServices_MarshalAsAttribute,
@@ -659,6 +661,7 @@ namespace Microsoft.CodeAnalysis
             "System.Runtime.InteropServices.OutAttribute",
 
             "System.Text.StringBuilder",
+            "System.Runtime.CompilerServices.DefaultInterpolatedStringHandler",
 
 #if XSHARP
             "System.Runtime.CompilerServices.IsConst",

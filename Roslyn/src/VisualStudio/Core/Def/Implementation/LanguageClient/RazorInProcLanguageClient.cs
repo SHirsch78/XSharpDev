@@ -3,9 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editor;
+using Microsoft.CodeAnalysis.Editor.Shared.Utilities;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.LanguageServer;
 using Microsoft.CodeAnalysis.Options;
@@ -14,9 +16,7 @@ using Microsoft.VisualStudio.LanguageServer.Client;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Microsoft.VisualStudio.LanguageServices;
 using Microsoft.VisualStudio.LanguageServices.Implementation.LanguageClient;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Utilities;
-using VSShell = Microsoft.VisualStudio.Shell;
 
 namespace Microsoft.CodeAnalysis.ExternalAccess.Razor.Lsp
 {
@@ -40,43 +40,52 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.Razor.Lsp
     [Export(typeof(ILanguageClient))]
     internal class RazorInProcLanguageClient : AbstractInProcLanguageClient
     {
-        public const string ClientName = "RazorCSharp";
+        public const string ClientName = ProtocolConstants.RazorCSharp;
 
-        private readonly IGlobalOptionService _globalOptionService;
         private readonly DefaultCapabilitiesProvider _defaultCapabilitiesProvider;
 
+        protected override ImmutableArray<string> SupportedLanguages => ProtocolConstants.RoslynLspLanguages;
+
         /// <summary>
-        /// Gets the name of the language client (displayed to the user).
+        /// Gets the name of the language client (displayed in yellow bars).
         /// </summary>
-        public override string Name => ServicesVSResources.Razor_CSharp_Language_Server_Client;
+        public override string Name => "Razor C# Language Server Client";
 
         [ImportingConstructor]
         [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
         public RazorInProcLanguageClient(
-            IGlobalOptionService globalOptionService,
-            LanguageServerProtocol languageServerProtocol,
-            VisualStudioWorkspace workspace,
+            RequestDispatcherFactory csharpVBRequestDispatcherFactory,
+            IGlobalOptionService globalOptions,
             IDiagnosticService diagnosticService,
             IAsynchronousOperationListenerProvider listenerProvider,
             ILspWorkspaceRegistrationService lspWorkspaceRegistrationService,
             DefaultCapabilitiesProvider defaultCapabilitiesProvider,
-            [Import(typeof(SAsyncServiceProvider))] VSShell.IAsyncServiceProvider asyncServiceProvider)
-            : base(languageServerProtocol, workspace, diagnosticService, listenerProvider, lspWorkspaceRegistrationService, asyncServiceProvider, ClientName)
+            IThreadingContext threadingContext,
+            ILspLoggerFactory lspLoggerFactory)
+            : base(csharpVBRequestDispatcherFactory, globalOptions, diagnosticService, listenerProvider, lspWorkspaceRegistrationService, lspLoggerFactory, threadingContext, ClientName)
         {
-            _globalOptionService = globalOptionService;
             _defaultCapabilitiesProvider = defaultCapabilitiesProvider;
         }
 
-        protected internal override VSServerCapabilities GetCapabilities()
+        public override ServerCapabilities GetCapabilities(ClientCapabilities clientCapabilities)
         {
-            var capabilities = _defaultCapabilitiesProvider.GetCapabilities();
-
-            capabilities.SupportsDiagnosticRequests = this.Workspace.IsPullDiagnostics(InternalDiagnosticsOptions.RazorDiagnosticMode);
+            var capabilities = _defaultCapabilitiesProvider.GetCapabilities(clientCapabilities);
 
             // Razor doesn't use workspace symbols, so disable to prevent duplicate results (with LiveshareLanguageClient) in liveshare.
             capabilities.WorkspaceSymbolProvider = false;
 
+            if (capabilities is VSInternalServerCapabilities vsServerCapabilities)
+            {
+                vsServerCapabilities.SupportsDiagnosticRequests = GlobalOptions.IsPullDiagnostics(InternalDiagnosticsOptions.RazorDiagnosticMode);
+                return vsServerCapabilities;
+            }
+
             return capabilities;
         }
+
+        /// <summary>
+        /// If the razor server is activated then any failures are catastrophic as no razor c# features will work.
+        /// </summary>
+        public override bool ShowNotificationOnInitializeFailed => true;
     }
 }

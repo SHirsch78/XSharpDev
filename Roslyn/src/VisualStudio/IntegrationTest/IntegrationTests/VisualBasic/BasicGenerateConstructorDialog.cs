@@ -87,7 +87,7 @@ Class C
 End Class", actualText);
         }
 
-        [WpfFact, Trait(Traits.Feature, Traits.Features.CodeActionsGenerateConstructorFromMembers)]
+        [WpfFact(Skip = "https://github.com/dotnet/roslyn/issues/57237"), Trait(Traits.Feature, Traits.Features.CodeActionsGenerateConstructorFromMembers)]
         public void VerifyReordering()
         {
             SetUpEditor(
@@ -103,6 +103,7 @@ End Class");
             VisualStudio.Editor.InvokeCodeActionList();
             VisualStudio.Editor.Verify.CodeAction("Generate constructor...", applyFix: true, blockUntilComplete: false);
             VerifyDialog(isOpen: true);
+            VisualStudio.Editor.DialogSendKeys(DialogName, VirtualKey.Tab);
             VisualStudio.Editor.DialogSendKeys(DialogName, VirtualKey.Tab);
             VisualStudio.Editor.PressDialogButton(DialogName, "Down");
             Dialog_ClickOk();
@@ -139,6 +140,7 @@ End Class");
             VisualStudio.Editor.InvokeCodeActionList();
             VisualStudio.Editor.Verify.CodeAction("Generate constructor...", applyFix: true, blockUntilComplete: false);
             VerifyDialog(isOpen: true);
+            VisualStudio.Editor.DialogSendKeys(DialogName, VirtualKey.Tab);
             VisualStudio.Editor.DialogSendKeys(DialogName, VirtualKey.Tab);
             VisualStudio.Editor.DialogSendKeys(DialogName, VirtualKey.Space);
             Dialog_ClickOk();

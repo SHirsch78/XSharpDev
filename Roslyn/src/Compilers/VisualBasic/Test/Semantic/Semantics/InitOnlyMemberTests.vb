@@ -3030,7 +3030,7 @@ BC30937: Member 'CL1.P' that matches this signature cannot be implemented becaus
             Assert.NotEmpty(p.ExplicitInterfaceImplementations.Single().TypeCustomModifiers)
         End Sub
 
-        <Fact>
+        <Fact(Skip:="https://github.com/dotnet/roslyn/issues/56665")>
         Public Sub LateBound_01()
 
             Dim csSource =
@@ -3102,7 +3102,7 @@ End Class
             CompileAndVerify(comp2, expectedOutput:=expectedOutput).VerifyDiagnostics()
         End Sub
 
-        <Fact>
+        <Fact(Skip:="https://github.com/dotnet/roslyn/issues/56665")>
         Public Sub LateBound_02()
 
             Dim csSource =
@@ -4311,9 +4311,11 @@ End Class
 
             Dim compilation = CreateCompilationWithCustomILSource(vbSource, ilSource, parseOptions:=TestOptions.RegularLatest, options:=TestOptions.ReleaseDll)
 
-            ' An expected error on the override is missing due to https://github.com/dotnet/roslyn/issues/50327
             compilation.AssertTheseDiagnostics(
 <expected>
+BC30657: 'Property1' has a return type that is not supported or parameter types that are not supported.
+        Set
+        ~~~
 BC30657: 'Property1' has a return type that is not supported or parameter types that are not supported.
         c.Property1 = 42
         ~~~~~~~~~~~
@@ -4898,9 +4900,11 @@ End Class
 
             Dim compilation = CreateCompilationWithCustomILSource(vbSource, ilSource, parseOptions:=TestOptions.RegularLatest, options:=TestOptions.ReleaseDll)
 
-            ' An error on override is not reported due to https://github.com/dotnet/roslyn/issues/50327
             compilation.AssertTheseDiagnostics(
 <expected>
+BC30657: 'Property1' has a return type that is not supported or parameter types that are not supported.
+    Overrides Property Property1 As Integer
+                       ~~~~~~~~~
 BC30456: 'get_Property1' is not a member of 'C'.
         Dim x1 = c.get_Property1()
                  ~~~~~~~~~~~~~~~

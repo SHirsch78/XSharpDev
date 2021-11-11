@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             SourceMemberContainerTypeSymbol containingType,
             ConstructorDeclarationSyntax syntax,
             bool isNullableAnalysisEnabled,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
         {
             var methodKind = syntax.Modifiers.Any(SyntaxKind.StaticKeyword) ? MethodKind.StaticConstructor : MethodKind.Constructor;
             return new SourceConstructorSymbol(containingType, syntax.Identifier.GetLocation(), syntax, methodKind, isNullableAnalysisEnabled, diagnostics);
@@ -35,8 +35,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
              Location location,
              ConstructorDeclarationSyntax syntax,
              MethodKind methodKind,
-            bool isNullableAnalysisEnabled,
-             DiagnosticBag diagnostics) :
+             bool isNullableAnalysisEnabled,
+             BindingDiagnosticBag diagnostics) :
              base(containingType, location, syntax, SyntaxFacts.HasYieldOperations(syntax))
         {
             bool hasBlockBody = syntax.Body != null;
@@ -155,7 +155,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             if (methodKind == MethodKind.StaticConstructor)
             {
-                if ((mods & DeclarationModifiers.AccessibilityMask) != 0)
+                // Don't report ERR_StaticConstructorWithAccessModifiers if the ctor symbol name doesn't match the containing type name.
+                // This avoids extra unnecessary errors.
+                // There will already be a diagnostic saying Method must have a return type.
+                if ((mods & DeclarationModifiers.AccessibilityMask) != 0 &&
+                    ContainingType.Name == ((ConstructorDeclarationSyntax)this.SyntaxNode).Identifier.ValueText)
                 {
                     diagnostics.Add(ErrorCode.ERR_StaticConstructorWithAccessModifiers, location, this);
                     mods = mods & ~DeclarationModifiers.AccessibilityMask;
@@ -175,7 +179,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return mods;
         }
 
-        private void CheckModifiers(MethodKind methodKind, bool hasBody, Location location, DiagnosticBag diagnostics)
+        private void CheckModifiers(MethodKind methodKind, bool hasBody, Location location, BindingDiagnosticBag diagnostics)
         {
             if (!hasBody && !IsExtern)
             {

@@ -21,7 +21,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public static SourceEnumConstantSymbol CreateExplicitValuedConstant(
             SourceMemberContainerTypeSymbol containingEnum,
             EnumMemberDeclarationSyntax syntax,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
         {
             var initializer = syntax.EqualsValue;
             Debug.Assert(initializer != null);
@@ -33,7 +33,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             EnumMemberDeclarationSyntax syntax,
             SourceEnumConstantSymbol otherConstant,
             int otherConstantOffset,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
         {
             if ((object)otherConstant == null)
             {
@@ -47,7 +47,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected SourceEnumConstantSymbol(SourceMemberContainerTypeSymbol containingEnum, EnumMemberDeclarationSyntax syntax, DiagnosticBag diagnostics)
+        protected SourceEnumConstantSymbol(SourceMemberContainerTypeSymbol containingEnum, EnumMemberDeclarationSyntax syntax, BindingDiagnosticBag diagnostics)
             : base(containingEnum, syntax.Identifier.ValueText, syntax.GetReference(), syntax.Identifier.GetLocation())
         {
 #if XSHARP
@@ -145,12 +145,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             public ZeroValuedEnumConstantSymbol(
                 SourceMemberContainerTypeSymbol containingEnum,
                 EnumMemberDeclarationSyntax syntax,
-                DiagnosticBag diagnostics)
+                BindingDiagnosticBag diagnostics)
                 : base(containingEnum, syntax, diagnostics)
             {
             }
 
-            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, DiagnosticBag diagnostics)
+            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, BindingDiagnosticBag diagnostics)
             {
                 var constantType = this.ContainingType.EnumUnderlyingType.SpecialType;
                 return Microsoft.CodeAnalysis.ConstantValue.Default(constantType);
@@ -165,13 +165,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 SourceMemberContainerTypeSymbol containingEnum,
                 EnumMemberDeclarationSyntax syntax,
                 EqualsValueClauseSyntax initializer,
-                DiagnosticBag diagnostics) :
+                BindingDiagnosticBag diagnostics) :
                 base(containingEnum, syntax, diagnostics)
             {
                 _equalsValueNodeRef = initializer.GetReference();
             }
 
-            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, DiagnosticBag diagnostics)
+            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, BindingDiagnosticBag diagnostics)
             {
                 return ConstantValueUtils.EvaluateFieldConstant(this, (EqualsValueClauseSyntax)_equalsValueNodeRef.GetSyntax(), dependencies, earlyDecodingWellKnownAttributes, diagnostics);
             }
@@ -187,7 +187,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 EnumMemberDeclarationSyntax syntax,
                 SourceEnumConstantSymbol otherConstant,
                 uint otherConstantOffset,
-                DiagnosticBag diagnostics) :
+                BindingDiagnosticBag diagnostics) :
                 base(containingEnum, syntax, diagnostics)
             {
                 Debug.Assert((object)otherConstant != null);
@@ -197,7 +197,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 _otherConstantOffset = otherConstantOffset;
             }
 
-            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, DiagnosticBag diagnostics)
+            protected override ConstantValue MakeConstantValue(HashSet<SourceFieldSymbolWithSyntaxReference> dependencies, bool earlyDecodingWellKnownAttributes, BindingDiagnosticBag diagnostics)
             {
                 var otherValue = _otherConstant.GetConstantValue(new ConstantFieldsInProgress(this, dependencies), earlyDecodingWellKnownAttributes);
                 // Value may be Unset if there are dependencies

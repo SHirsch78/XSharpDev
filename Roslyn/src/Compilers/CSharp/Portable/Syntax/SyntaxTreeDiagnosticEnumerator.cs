@@ -254,42 +254,6 @@ tryAgain:
            }
            return new LinePosition(iLine, iCol);
         }
-        /*
-        internal static Location GetLocation(this IXParseTree node)
-        {
-
-            TextSpan span = new TextSpan(0, 1);
-            LinePositionSpan lspan = new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 1));
-            if (node is XSharpParserRuleContext)
-            {
-                var rule = node as XSharpParserRuleContext;
-                span = new TextSpan(rule.Start.StartIndex, rule.FullWidth);     // Note Antlr StartIndex = 0 based
-                lspan = new LinePositionSpan(rule.Start.GetLinePosition(true), rule.Stop.GetLinePosition(false));
-            }
-            else if (node is XTerminalNodeImpl)
-            {
-                var term = node as XTerminalNodeImpl;
-                var sym = term.Symbol;
-                if (term.SourceSymbol != null)
-                {
-                    sym = term.SourceSymbol;
-                }
-                if (sym != null)
-                {
-                    span = new TextSpan(sym.StartIndex, sym.StopIndex - sym.StartIndex+1);  // note Antlr StartIndex = 0 based
-                    lspan = new LinePositionSpan(sym.GetLinePosition(true),sym.GetLinePosition(false));
-                }
-                else
-                {
-                    span = new TextSpan(term.Position, term.FullWidth);     // Position = 0 based
-                    // default lSpan is set above
-                }
-            }
-
-            return new ExternalFileLocation(node.SourceFileName, span, lspan);
-
-        }
-        */
     }
 #endif
 }

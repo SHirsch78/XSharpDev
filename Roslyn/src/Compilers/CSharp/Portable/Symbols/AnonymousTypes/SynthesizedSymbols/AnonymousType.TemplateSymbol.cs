@@ -288,6 +288,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             internal override bool HasCodeAnalysisEmbeddedAttribute => false;
 
+            internal override bool IsInterpolatedStringHandlerType => false;
+
             internal override ImmutableArray<TypeWithAnnotations> TypeArgumentsWithAnnotationsNoUseSiteDiagnostics
             {
                 get { return GetTypeParametersAsTypeArguments(); }
@@ -529,6 +531,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             internal override bool IsRecord => false;
 
+            internal override bool IsRecordStruct => false;
+
             internal override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<SynthesizedAttributeData> attributes)
             {
                 base.AddSynthesizedAttributes(moduleBuilder, ref attributes);
@@ -596,6 +600,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             internal override bool HasPossibleWellKnownCloneMethod() => false;
+
+            internal override IEnumerable<(MethodSymbol Body, MethodSymbol Implemented)> SynthesizedInterfaceMethodImpls()
+            {
+                return SpecializedCollections.EmptyEnumerable<(MethodSymbol Body, MethodSymbol Implemented)>();
+            }
         }
     }
 }

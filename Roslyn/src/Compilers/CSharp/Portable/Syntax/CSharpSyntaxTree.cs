@@ -8,6 +8,7 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -392,6 +393,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 cloneRoot: false);
         }
 
+        /// <summary>
+        /// Produces a syntax tree by parsing the source text lazily. The syntax tree is realized when
+        /// <see cref="CSharpSyntaxTree.GetRoot(CancellationToken)"/> is called.
+        /// </summary>
+        internal static SyntaxTree ParseTextLazy(
+            SourceText text,
+            CSharpParseOptions? options = null,
+            string path = "")
+        {
+            return new LazySyntaxTree(text, options ?? CSharpParseOptions.Default, path, diagnosticOptions: null);
+        }
+
         // The overload that has more parameters is itself obsolete, as an intentional break to allow future
         // expansion
 #pragma warning disable RS0027 // Public API with optional parameter(s) should have the most parameters amongst its public overloads.
@@ -638,6 +651,17 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         #region LinePositions and Locations
 
+        private CSharpLineDirectiveMap GetDirectiveMap()
+        {
+            if (_lazyLineDirectiveMap == null)
+            {
+                // Create the line directive map on demand.
+                Interlocked.CompareExchange(ref _lazyLineDirectiveMap, new CSharpLineDirectiveMap(this), null);
+            }
+
+            return _lazyLineDirectiveMap;
+        }
+
         /// <summary>
         /// Gets the location in terms of path, line and column for a given span.
         /// </summary>
@@ -652,7 +676,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if XSHARP
             return GetXNodeSpan(span);
 #else
-            return new FileLinePositionSpan(this.FilePath, GetLinePosition(span.Start), GetLinePosition(span.End));
+            => new(FilePath, GetLinePosition(span.Start, cancellationToken), GetLinePosition(span.End, cancellationToken));
 #endif
         }
 
@@ -673,33 +697,25 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </para>
         /// </returns>
         public override FileLinePositionSpan GetMappedLineSpan(TextSpan span, CancellationToken cancellationToken = default)
-        {
 #if XSHARP
-            return GetXNodeSpan(span);
+            => return GetXNodeSpan(span);
 #else
-            if (_lazyLineDirectiveMap == null)
-            {
-                // Create the line directive map on demand.
-                Interlocked.CompareExchange(ref _lazyLineDirectiveMap, new CSharpLineDirectiveMap(this), null);
-            }
-
-            return _lazyLineDirectiveMap.TranslateSpan(this.GetText(cancellationToken), this.FilePath, span);
+            => GetDirectiveMap().TranslateSpan(GetText(cancellationToken), this.FilePath, span);
 #endif
-        }
 
+        /// <inheritdoc/>
         public override LineVisibility GetLineVisibility(int position, CancellationToken cancellationToken = default)
-        {
 #if XSHARP
-            return GetXNodeVisibility(position);
+            => GetXNodeVisibility(position);
 #else
-            if (_lazyLineDirectiveMap == null)
-            {
-                // Create the line directive map on demand.
-                Interlocked.CompareExchange(ref _lazyLineDirectiveMap, new CSharpLineDirectiveMap(this), null);
-            }
-
-            return _lazyLineDirectiveMap.GetLineVisibility(this.GetText(cancellationToken), position);
+            => GetDirectiveMap().GetLineVisibility(GetText(cancellationToken), position);
 #endif
+        /// <inheritdoc/>
+        public override IEnumerable<LineMapping> GetLineMappings(CancellationToken cancellationToken = default)
+        {
+            var map = GetDirectiveMap();
+            Debug.Assert(map.Entries.Length >= 1);
+            return (map.Entries.Length == 1) ? Array.Empty<LineMapping>() : map.GetLineMappings(GetText(cancellationToken).Lines);
         }
 
         /// <summary>
@@ -710,18 +726,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="isHiddenPosition">When the method returns, contains a boolean value indicating whether this span is considered hidden or not.</param>
         /// <returns>A resulting <see cref="FileLinePositionSpan"/>.</returns>
         internal override FileLinePositionSpan GetMappedLineSpanAndVisibility(TextSpan span, out bool isHiddenPosition)
-        {
 #if XSHARP
+        {
             isHiddenPosition = GetXNodeVisibility(span.Start) == LineVisibility.Hidden;
             return GetXNodeSpan(span);
+		}
 #else
-            if (_lazyLineDirectiveMap == null)
-            {
-                // Create the line directive map on demand.
-                Interlocked.CompareExchange(ref _lazyLineDirectiveMap, new CSharpLineDirectiveMap(this), null);
-            }
-
-            return _lazyLineDirectiveMap.TranslateSpanAndVisibility(this.GetText(), this.FilePath, span, out isHiddenPosition);
+            => GetDirectiveMap().TranslateSpanAndVisibility(GetText(), FilePath, span, out isHiddenPosition);
 #endif
         }
 
@@ -730,15 +741,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         /// <returns>True if there is at least one hidden region.</returns>
         public override bool HasHiddenRegions()
-        {
-            if (_lazyLineDirectiveMap == null)
-            {
-                // Create the line directive map on demand.
-                Interlocked.CompareExchange(ref _lazyLineDirectiveMap, new CSharpLineDirectiveMap(this), null);
-            }
-
-            return _lazyLineDirectiveMap.HasAnyHiddenRegions();
-        }
+            => GetDirectiveMap().HasAnyHiddenRegions();
 
         /// <summary>
         /// Given the error code and the source location, get the warning state based on <c>#pragma warning</c> directives.
@@ -805,13 +808,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         private GeneratedKind _lazyIsGeneratedCode = GeneratedKind.Unknown;
 
         private LinePosition GetLinePosition(int position)
-        {
 #if XSHARP
-            return GetXNodePosition(position);
+            => GetXNodePosition(position);
 #else
-            return this.GetText().Lines.GetLinePosition(position);
+            => GetText(cancellationToken).Lines.GetLinePosition(position);
 #endif
-        }
 
         /// <summary>
         /// Gets a <see cref="Location"/> for the specified text <paramref name="span"/>.

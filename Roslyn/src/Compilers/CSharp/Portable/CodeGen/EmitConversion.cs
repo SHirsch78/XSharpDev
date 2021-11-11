@@ -331,6 +331,17 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             if (isStatic)
             {
                 _builder.EmitNullConstant();
+
+                if (method.IsAbstract)
+                {
+                    if (receiver is not BoundTypeExpression { Type: { TypeKind: TypeKind.TypeParameter } })
+                    {
+                        throw ExceptionUtilities.Unreachable;
+                    }
+
+                    _builder.EmitOpCode(ILOpCode.Constrained);
+                    EmitSymbolToken(receiver.Type, receiver.Syntax);
+                }
             }
             else
             {
@@ -346,7 +357,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             // Metadata Spec (II.14.6):
             //   Delegates shall be declared sealed.
             //   The Invoke method shall be virtual.
-            if (method.IsMetadataVirtual() && !method.ContainingType.IsDelegateType() && !receiver.SuppressVirtualCalls)
+            if (!method.IsStatic && method.IsMetadataVirtual() && !method.ContainingType.IsDelegateType() && !receiver.SuppressVirtualCalls)
             {
                 // NOTE: method.IsMetadataVirtual -> receiver != null
                 _builder.EmitOpCode(ILOpCode.Dup);

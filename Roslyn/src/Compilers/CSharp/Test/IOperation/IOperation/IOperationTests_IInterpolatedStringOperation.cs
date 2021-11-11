@@ -5,17 +5,24 @@
 #nullable disable
 
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp.Test.Utilities;
 using Microsoft.CodeAnalysis.Test.Utilities;
 using Roslyn.Test.Utilities;
 using Xunit;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 {
-    public partial class IOperationTests : SemanticModelTestBase
+    public class IOperationTests_IInterpolatedStringExpression : SemanticModelTestBase
     {
+        private static CSharpTestSource GetSource(string code, bool hasDefaultHandler)
+            => hasDefaultHandler
+                ? new[] { code, GetInterpolatedStringHandlerDefinition(includeSpanOverloads: false, useDefaultParameters: false, useBoolReturns: false) }
+                : code;
+
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_Empty()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_Empty(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -34,12 +41,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_OnlyTextPart()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_OnlyTextPart(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -61,12 +69,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_OnlyInterpolationPart()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_OnlyInterpolationPart(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -92,12 +101,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_EmptyInterpolationPart()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_EmptyInterpolationPart(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -128,12 +138,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
                 Diagnostic(ErrorCode.ERR_ExpressionExpected, "").WithLocation(8, 40)
             };
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_TextAndInterpolationParts()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_TextAndInterpolationParts(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -172,12 +183,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_FormatAndAlignment()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_FormatAndAlignment(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -233,12 +245,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_InterpolationAndFormatAndAlignment()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_InterpolationAndFormatAndAlignment(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -274,12 +287,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_InvocationInInterpolation()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_InvocationInInterpolation(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -339,12 +353,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_NestedInterpolation()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_NestedInterpolation(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -392,12 +407,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation)]
-        [Fact, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
-        public void InterpolatedStringExpression_InvalidExpressionInInterpolation()
+        [Theory, WorkItem(18300, "https://github.com/dotnet/roslyn/issues/18300")]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_InvalidExpressionInInterpolation(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -446,12 +462,13 @@ IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.Str
                 Diagnostic(ErrorCode.ERR_BadSKunknown, "Class").WithArguments("Class", "type").WithLocation(8, 65)
             };
 
-            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(source, expectedOperationTree, expectedDiagnostics);
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(GetSource(source, hasDefaultHandler), expectedOperationTree, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_Empty_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_Empty_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -487,12 +504,13 @@ Block[B2] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_OnlyTextPart_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_OnlyTextPart_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -531,12 +549,13 @@ Block[B2] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_OnlyInterpolationPart_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_OnlyInterpolationPart_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -614,12 +633,13 @@ Block[B5] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_MultipleInterpolationParts_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_MultipleInterpolationParts_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -704,12 +724,13 @@ Block[B5] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_TextAndInterpolationParts_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_TextAndInterpolationParts_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -823,12 +844,13 @@ Block[B8] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_FormatAndAlignment_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_FormatAndAlignment_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -906,12 +928,13 @@ Block[B5] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_FormatAndAlignment_Flow_02()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_FormatAndAlignment_Flow_02(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -1004,12 +1027,13 @@ Block[B5] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_FormatAndAlignment_Flow_03()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_FormatAndAlignment_Flow_03(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -1117,12 +1141,13 @@ Block[B5] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_NestedInterpolation_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_NestedInterpolation_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -1230,12 +1255,13 @@ Block[B6] - Exit
 ";
             var expectedDiagnostics = DiagnosticDescription.None;
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_ConditionalCodeInAlignment_Flow()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_ConditionalCodeInAlignment_Flow(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -1321,12 +1347,13 @@ Block[B5] - Exit
                 Diagnostic(ErrorCode.ERR_ConstantExpected, "(a ? b : c)").WithLocation(8, 18)
             };
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
         }
 
         [CompilerTrait(CompilerFeature.IOperation, CompilerFeature.Dataflow)]
-        [Fact]
-        public void InterpolatedStringExpression_ConditionalCodeInAlignment_Flow_02()
+        [Theory]
+        [CombinatorialData]
+        public void InterpolatedStringExpression_ConditionalCodeInAlignment_Flow_02(bool hasDefaultHandler)
         {
             string source = @"
 using System;
@@ -1360,7 +1387,7 @@ Block[B0] - Entry
                 IParameterReferenceOperation: c2 (OperationKind.ParameterReference, Type: System.String) (Syntax: 'c2')
 
         Jump if False (Regular) to Block[B3]
-            IParameterReferenceOperation: a (OperationKind.ParameterReference, Type: System.Boolean) (Syntax: 'a')
+            IParameterReferenceOperation: a (OperationKind.ParameterReference, Type: System.Boolean, IsInvalid) (Syntax: 'a')
 
         Next (Regular) Block[B2]
     Block[B2] - Block
@@ -1411,15 +1438,654 @@ Block[B5] - Exit
     Statements (0)
 ";
             var expectedDiagnostics = new DiagnosticDescription[] {
-                // file.cs(8,24): error CS0029: Cannot implicitly convert type 'string' to 'int'
+                // file.cs(8,20): error CS0029: Cannot implicitly convert type 'string' to 'int'
                 //         p = $"{c2,(a ? b : c):D3}";
-                Diagnostic(ErrorCode.ERR_NoImplicitConv, "b").WithArguments("string", "int").WithLocation(8, 24),
-                // file.cs(8,28): error CS0029: Cannot implicitly convert type 'string' to 'int'
-                //         p = $"{c2,(a ? b : c):D3}";
-                Diagnostic(ErrorCode.ERR_NoImplicitConv, "c").WithArguments("string", "int").WithLocation(8, 28)
+                Diagnostic(ErrorCode.ERR_NoImplicitConv, "a ? b : c").WithArguments("string", "int").WithLocation(8, 20)
             };
 
-            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(source, expectedFlowGraph, expectedDiagnostics);
+            VerifyFlowGraphAndDiagnosticsForTest<BlockSyntax>(GetSource(source, hasDefaultHandler), expectedFlowGraph, expectedDiagnostics);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_01()
+        {
+            var code = @"
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i,1:test}""/*</bind>*/;
+";
+
+            var handler = GetInterpolatedStringCustomHandlerType("CustomHandler", "struct", useBoolReturns: false);
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'c = $""literal{i,1:test}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= $""literal{i,1:test}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsImplicit) (Syntax: '$""literal{i,1:test}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{i,1:test}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+                    Text: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i,1:test}')
+                    Expression: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'i')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+                    Alignment: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+                    FormatString: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""test"") (Syntax: ':test')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, handler }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_02()
+        {
+            var code = @"
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i,1}""/*</bind>*/;
+";
+
+            var handler = GetInterpolatedStringCustomHandlerType("CustomHandler", "struct", useBoolReturns: false);
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'c = $""literal{i,1}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= $""literal{i,1}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsImplicit) (Syntax: '$""literal{i,1}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{i,1}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+                    Text: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i,1}')
+                    Expression: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'i')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+                    Alignment: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+                    FormatString: 
+                      null
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, handler }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_03()
+        {
+            var code = @"
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i:test}""/*</bind>*/;
+";
+
+            var handler = GetInterpolatedStringCustomHandlerType("CustomHandler", "struct", useBoolReturns: false);
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'c = $""literal{i:test}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= $""literal{i:test}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsImplicit) (Syntax: '$""literal{i:test}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{i:test}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+                    Text: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i:test}')
+                    Expression: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'i')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+                    Alignment: 
+                      null
+                    FormatString: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""test"") (Syntax: ':test')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, handler }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_04()
+        {
+            var code = @"
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i}""/*</bind>*/;
+";
+
+            var handler = GetInterpolatedStringCustomHandlerType("CustomHandler", "struct", useBoolReturns: false);
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'c = $""literal{i}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= $""literal{i}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsImplicit) (Syntax: '$""literal{i}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{i}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+                    Text: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i}')
+                    Expression: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'i')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+                    Alignment: 
+                      null
+                    FormatString: 
+                      null
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, handler }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_05()
+        {
+            var code = @"
+using System.Runtime.CompilerServices;
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i}""/*</bind>*/;
+
+[InterpolatedStringHandler]
+public struct CustomHandler {}
+";
+
+            var expectedDiagnostics = new[]
+            {
+                // (4,29): error CS1729: 'CustomHandler' does not contain a constructor that takes 2 arguments
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_BadCtorArgCount, @"$""literal{i}""").WithArguments("CustomHandler", "2").WithLocation(4, 29),
+                // (4,29): error CS1729: 'CustomHandler' does not contain a constructor that takes 3 arguments
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_BadCtorArgCount, @"$""literal{i}""").WithArguments("CustomHandler", "3").WithLocation(4, 29),
+                // (4,31): error CS1061: 'CustomHandler' does not contain a definition for 'AppendLiteral' and no accessible extension method 'AppendLiteral' accepting a first argument of type 'CustomHandler' could be found (are you missing a using directive or an assembly reference?)
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_NoSuchMemberOrExtension, "literal").WithArguments("CustomHandler", "AppendLiteral").WithLocation(4, 31),
+                // (4,31): error CS8941: Interpolated string handler method '?.()' is malformed. It does not return 'void' or 'bool'.
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_InterpolatedStringHandlerMethodReturnMalformed, "literal").WithArguments("?.()").WithLocation(4, 31),
+                // (4,38): error CS1061: 'CustomHandler' does not contain a definition for 'AppendFormatted' and no accessible extension method 'AppendFormatted' accepting a first argument of type 'CustomHandler' could be found (are you missing a using directive or an assembly reference?)
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_NoSuchMemberOrExtension, "{i}").WithArguments("CustomHandler", "AppendFormatted").WithLocation(4, 38),
+                // (4,38): error CS8941: Interpolated string handler method '?.()' is malformed. It does not return 'void' or 'bool'.
+                // CustomHandler /*<bind>*/c = $"literal{i}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_InterpolatedStringHandlerMethodReturnMalformed, "{i}").WithArguments("?.()").WithLocation(4, 38)
+            };
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null, IsInvalid) (Syntax: 'c = $""literal{i}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null, IsInvalid) (Syntax: '= $""literal{i}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsInvalid, IsImplicit) (Syntax: '$""literal{i}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String, IsInvalid) (Syntax: '$""literal{i}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null, IsInvalid) (Syntax: 'literal')
+                    Text: 
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsInvalid, IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null, IsInvalid) (Syntax: '{i}')
+                    Expression: 
+                      ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32, IsInvalid) (Syntax: 'i')
+                    Alignment: 
+                      null
+                    FormatString: 
+                      null
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, InterpolatedStringHandlerAttribute }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_06()
+        {
+            var code = @"
+using System.Runtime.CompilerServices;
+int i = 0;
+CustomHandler /*<bind>*/c = $""literal{i,1:test}""/*</bind>*/;
+
+[InterpolatedStringHandler]
+public struct CustomHandler
+{
+    public CustomHandler(int literalLength, int formattedCount) {}
+    public void AppendFormatted(object o, object alignment, object format) {}
+    public void AppendLiteral(object o) {}
+}
+";
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null) (Syntax: 'c = $""literal{i,1:test}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null) (Syntax: '= $""literal{i,1:test}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsImplicit) (Syntax: '$""literal{i,1:test}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{i,1:test}""')
+              Parts(2):
+                  IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+                    Text: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'literal')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i,1:test}')
+                    Expression: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: 'i')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+                    Alignment: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: '1')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+                    FormatString: 
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: ':test')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+                        Operand: 
+                          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""test"") (Syntax: ':test')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, InterpolatedStringHandlerAttribute }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerConversion_07()
+        {
+            var code = @"
+using System.Runtime.CompilerServices;
+CustomHandler /*<bind>*/c = $""{}""/*</bind>*/;
+
+[InterpolatedStringHandler]
+public struct CustomHandler
+{
+    public CustomHandler(int literalLength, int formattedCount) {}
+    public void AppendFormatted(object o, object alignment, object format) {}
+    public void AppendLiteral(object o) {}
+}
+";
+
+            var expectedDiagnostics = new[] {
+                // (3,32): error CS1733: Expected expression
+                // CustomHandler /*<bind>*/c = $"{}"/*</bind>*/;
+                Diagnostic(ErrorCode.ERR_ExpressionExpected, "").WithLocation(3, 32)
+            };
+
+            string expectedOperationTree = @"
+IVariableDeclaratorOperation (Symbol: CustomHandler c) (OperationKind.VariableDeclarator, Type: null, IsInvalid) (Syntax: 'c = $""{}""')
+  Initializer: 
+    IVariableInitializerOperation (OperationKind.VariableInitializer, Type: null, IsInvalid) (Syntax: '= $""{}""')
+      IOperation:  (OperationKind.None, Type: CustomHandler, IsInvalid, IsImplicit) (Syntax: '$""{}""')
+        Children(1):
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String, IsInvalid) (Syntax: '$""{}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null, IsInvalid) (Syntax: '{}')
+                    Expression: 
+                      IInvalidOperation (OperationKind.Invalid, Type: null, IsInvalid) (Syntax: '')
+                        Children(0)
+                    Alignment: 
+                      null
+                    FormatString: 
+                      null
+
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<VariableDeclaratorSyntax>(new[] { code, InterpolatedStringHandlerAttribute }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void DynamicConstruction_01()
+        {
+            var code = @"
+using System;
+using System.Runtime.CompilerServices;
+dynamic d = 1;
+M(/*<bind>*/$""literal{d,1:format}""/*</bind>*/);
+
+void M(CustomHandler c) {}
+
+[InterpolatedStringHandler]
+public struct CustomHandler
+{
+    public CustomHandler(int literalLength, int formattedCount)
+    {
+    }
+
+    public void AppendLiteral(dynamic d)
+    {
+        Console.WriteLine(""AppendLiteral"");
+    }
+
+    public void AppendFormatted(dynamic d, int alignment, string format)
+    {
+        Console.WriteLine(""AppendFormatted"");
+    }
+}
+";
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""literal{d,1:format}""')
+  Parts(2):
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: 'literal')
+        Text:
+          IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: dynamic, IsImplicit) (Syntax: 'literal')
+            Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+            Operand:
+              ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsImplicit) (Syntax: 'literal')
+      IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{d,1:format}')
+        Expression:
+          ILocalReferenceOperation: d (OperationKind.LocalReference, Type: dynamic) (Syntax: 'd')
+        Alignment:
+          ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+        FormatString:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""format"") (Syntax: ':format')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(new[] { code, InterpolatedStringHandlerAttribute }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void DynamicConstruction_02()
+        {
+            var code = @"
+using System.Runtime.CompilerServices;
+dynamic d = 1;
+M(d, /*<bind>*/$""{1}literal""/*</bind>*/);
+
+void M(dynamic d, [InterpolatedStringHandlerArgument(""d"")]CustomHandler c) {}
+
+public partial struct CustomHandler
+{
+    public CustomHandler(int literalLength, int formattedCount, dynamic d) : this() {}
+}
+";
+
+            var handler = GetInterpolatedStringCustomHandlerType("CustomHandler", "partial struct", useBoolReturns: false);
+
+            var expectedDiagnostics = new[] {
+                // (4,16): error CS8953: An interpolated string handler construction cannot use dynamic. Manually construct an instance of 'CustomHandler'.
+                // M(d, /*<bind>*/$"{1}literal"/*</bind>*/);
+                Diagnostic(ErrorCode.ERR_InterpolatedStringHandlerCreationCannotUseDynamic, @"$""{1}literal""").WithArguments("CustomHandler").WithLocation(4, 16)
+            };
+
+            string expectedOperationTree = @"
+IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String, IsInvalid) (Syntax: '$""{1}literal""')
+  Parts(2):
+      IInterpolationOperation (OperationKind.Interpolation, Type: null, IsInvalid) (Syntax: '{1}')
+        Expression:
+          IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsInvalid, IsImplicit) (Syntax: '1')
+            Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+            Operand:
+              ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1, IsInvalid) (Syntax: '1')
+        Alignment:
+          null
+        FormatString:
+          null
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null, IsInvalid) (Syntax: 'literal')
+        Text:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""literal"", IsInvalid, IsImplicit) (Syntax: 'literal')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(new[] { code, handler, InterpolatedStringHandlerArgumentAttribute }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact, WorkItem(54703, "https://github.com/dotnet/roslyn/issues/54703")]
+        public void InterpolationEscapeConstantValue_WithDefaultHandler()
+        {
+            var code = @"
+int i = 1;
+System.Console.WriteLine(/*<bind>*/$""{{ {i} }}""/*</bind>*/);";
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{{ {i} }}""')
+  Parts(3):
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: '{{ ')
+        Text:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""{ "", IsImplicit) (Syntax: '{{ ')
+      IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i}')
+        Expression:
+          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+        Alignment:
+          null
+        FormatString:
+          null
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: ' }}')
+        Text:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: "" }"", IsImplicit) (Syntax: ' }}')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(new[] { code, GetInterpolatedStringHandlerDefinition(includeSpanOverloads: false, useDefaultParameters: false, useBoolReturns: false) }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact, WorkItem(54703, "https://github.com/dotnet/roslyn/issues/54703")]
+        public void InterpolationEscapeConstantValue_WithoutDefaultHandler()
+        {
+            var code = @"
+int i = 1;
+System.Console.WriteLine(/*<bind>*/$""{{ {i} }}""/*</bind>*/);";
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            // The difference between this test and the previous one is the constant value of the ILiteralOperations. When handlers are involved, the
+            // constant value is { and }. When they are not involved, the constant values are {{ and }}
+            string expectedOperationTree = @"
+IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{{ {i} }}""')
+  Parts(3):
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: '{{ ')
+        Text:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""{{ "", IsImplicit) (Syntax: '{{ ')
+      IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i}')
+        Expression:
+          ILocalReferenceOperation: i (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i')
+        Alignment:
+          null
+        FormatString:
+          null
+      IInterpolatedStringTextOperation (OperationKind.InterpolatedStringText, Type: null) (Syntax: ' }}')
+        Text:
+          ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: "" }}"", IsImplicit) (Syntax: ' }}')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<InterpolatedStringExpressionSyntax>(new[] { code }, expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void InterpolatedStringsAddedUnderObjectAddition_DefiniteAssignment()
+        {
+            var code = @"
+#pragma warning disable CS0219 // Unused local
+object o1;
+object o2;
+object o3;
+_ = /*<bind>*/$""{o1 = null}"" + $""{o2 = null}"" + $""{o3 = null}"" + 1/*</bind>*/;
+";
+
+            var comp = CreateCompilation(new[] { code, GetInterpolatedStringHandlerDefinition(includeSpanOverloads: false, useDefaultParameters: false, useBoolReturns: true) });
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+
+            string expectedOperationTree = @"
+IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{o1 = nul ...  null}"" + 1')
+  Left:
+    IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{o1 = nul ... o3 = null}""')
+      Left:
+        IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{o1 = nul ... o2 = null}""')
+          Left:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{o1 = null}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{o1 = null}')
+                    Expression:
+                      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Object) (Syntax: 'o1 = null')
+                        Left:
+                          ILocalReferenceOperation: o1 (OperationKind.LocalReference, Type: System.Object) (Syntax: 'o1')
+                        Right:
+                          IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, Constant: null, IsImplicit) (Syntax: 'null')
+                            Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+                            Operand:
+                              ILiteralOperation (OperationKind.Literal, Type: null, Constant: null) (Syntax: 'null')
+                    Alignment:
+                      null
+                    FormatString:
+                      null
+          Right:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{o2 = null}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{o2 = null}')
+                    Expression:
+                      ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Object) (Syntax: 'o2 = null')
+                        Left:
+                          ILocalReferenceOperation: o2 (OperationKind.LocalReference, Type: System.Object) (Syntax: 'o2')
+                        Right:
+                          IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, Constant: null, IsImplicit) (Syntax: 'null')
+                            Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+                            Operand:
+                              ILiteralOperation (OperationKind.Literal, Type: null, Constant: null) (Syntax: 'null')
+                    Alignment:
+                      null
+                    FormatString:
+                      null
+      Right:
+        IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{o3 = null}""')
+          Parts(1):
+              IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{o3 = null}')
+                Expression:
+                  ISimpleAssignmentOperation (OperationKind.SimpleAssignment, Type: System.Object) (Syntax: 'o3 = null')
+                    Left:
+                      ILocalReferenceOperation: o3 (OperationKind.LocalReference, Type: System.Object) (Syntax: 'o3')
+                    Right:
+                      IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, Constant: null, IsImplicit) (Syntax: 'null')
+                        Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: True, IsUserDefined: False) (MethodSymbol: null)
+                        Operand:
+                          ILiteralOperation (OperationKind.Literal, Type: null, Constant: null) (Syntax: 'null')
+                Alignment:
+                  null
+                FormatString:
+                  null
+  Right:
+    IConversionOperation (TryCast: False, Unchecked) (OperationKind.Conversion, Type: System.Object, IsImplicit) (Syntax: '1')
+      Conversion: CommonConversion (Exists: True, IsIdentity: False, IsNumeric: False, IsReference: False, IsUserDefined: False) (MethodSymbol: null)
+      Operand:
+        ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<BinaryExpressionSyntax>(new[] { code, GetInterpolatedStringHandlerDefinition(includeSpanOverloads: false, useDefaultParameters: false, useBoolReturns: true) },
+                                                                             expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
+        }
+
+        [Fact]
+        public void ParenthesizedInterpolatedStringsAdded()
+        {
+            var code = @"
+int i1 = 1;
+int i2 = 2;
+int i3 = 3;
+int i4 = 4;
+int i5 = 5;
+int i6 = 6;
+
+string s = /*<bind>*/(($""{i1,1:d}"" + $""{i2,2:f}"") + $""{i3,3:g}"") + ($""{i4,4:h}"" + ($""{i5,5:i}"" + $""{i6,6:j}""))/*</bind>*/;
+";
+
+            var expectedDiagnostics = DiagnosticDescription.None;
+            var expectedOperationTree = @"
+IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '(($""{i1,1:d ... {i6,6:j}""))')
+  Left:
+    IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '($""{i1,1:d} ... $""{i3,3:g}""')
+      Left:
+        IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{i1,1:d}"" ... $""{i2,2:f}""')
+          Left:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i1,1:d}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i1,1:d}')
+                    Expression:
+                      ILocalReferenceOperation: i1 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i1')
+                    Alignment:
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 1) (Syntax: '1')
+                    FormatString:
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""d"") (Syntax: ':d')
+          Right:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i2,2:f}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i2,2:f}')
+                    Expression:
+                      ILocalReferenceOperation: i2 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i2')
+                    Alignment:
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 2) (Syntax: '2')
+                    FormatString:
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""f"") (Syntax: ':f')
+      Right:
+        IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i3,3:g}""')
+          Parts(1):
+              IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i3,3:g}')
+                Expression:
+                  ILocalReferenceOperation: i3 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i3')
+                Alignment:
+                  ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 3) (Syntax: '3')
+                FormatString:
+                  ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""g"") (Syntax: ':g')
+  Right:
+    IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{i4,4:h}"" ... ""{i6,6:j}"")')
+      Left:
+        IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i4,4:h}""')
+          Parts(1):
+              IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i4,4:h}')
+                Expression:
+                  ILocalReferenceOperation: i4 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i4')
+                Alignment:
+                  ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 4) (Syntax: '4')
+                FormatString:
+                  ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""h"") (Syntax: ':h')
+      Right:
+        IBinaryOperation (BinaryOperatorKind.Add) (OperationKind.Binary, Type: System.String) (Syntax: '$""{i5,5:i}"" ... $""{i6,6:j}""')
+          Left:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i5,5:i}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i5,5:i}')
+                    Expression:
+                      ILocalReferenceOperation: i5 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i5')
+                    Alignment:
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 5) (Syntax: '5')
+                    FormatString:
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""i"") (Syntax: ':i')
+          Right:
+            IInterpolatedStringOperation (OperationKind.InterpolatedString, Type: System.String) (Syntax: '$""{i6,6:j}""')
+              Parts(1):
+                  IInterpolationOperation (OperationKind.Interpolation, Type: null) (Syntax: '{i6,6:j}')
+                    Expression:
+                      ILocalReferenceOperation: i6 (OperationKind.LocalReference, Type: System.Int32) (Syntax: 'i6')
+                    Alignment:
+                      ILiteralOperation (OperationKind.Literal, Type: System.Int32, Constant: 6) (Syntax: '6')
+                    FormatString:
+                      ILiteralOperation (OperationKind.Literal, Type: System.String, Constant: ""j"") (Syntax: ':j')
+";
+
+            VerifyOperationTreeAndDiagnosticsForTest<BinaryExpressionSyntax>(new[] { code, GetInterpolatedStringHandlerDefinition(includeSpanOverloads: false, useDefaultParameters: false, useBoolReturns: true) },
+                                                                             expectedOperationTree, expectedDiagnostics, parseOptions: TestOptions.RegularPreview);
         }
     }
 }

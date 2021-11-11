@@ -85,41 +85,18 @@ namespace Microsoft.CodeAnalysis.CompilerServer
             }
         }
 
-        /// <summary>
-        /// Was a server running with the specified session key during the execution of this call?
-        /// </summary>
-        private static bool? WasServerRunning(string pipeName)
-        {
-            string mutexName = BuildServerConnection.GetServerMutexName(pipeName);
-            return BuildServerConnection.WasServerMutexOpen(mutexName);
-        }
-
         internal static IClientConnectionHost CreateClientConnectionHost(string pipeName, ICompilerServerLogger logger) => new NamedPipeClientConnectionHost(pipeName, logger);
 
         internal static ICompilerServerHost CreateCompilerServerHost(ICompilerServerLogger logger)
         {
-            // VBCSCompiler is installed in the same directory as csc.exe and vbc.exe which is also the 
-            // location of the response files.
-            //
-            // BaseDirectory was mistakenly marked as potentially null in 3.1
-            // https://github.com/dotnet/runtime/pull/32486
-            var clientDirectory = AppDomain.CurrentDomain.BaseDirectory!;
+            var clientDirectory = BuildClient.GetClientDirectory();
             var sdkDirectory = BuildClient.GetSystemSdkDirectory();
-
             return new CompilerServerHost(clientDirectory, sdkDirectory, logger);
-        }
-
-        private async Task<Stream?> ConnectForShutdownAsync(string pipeName, int timeout)
-        {
-            return await BuildServerConnection.TryConnectToServerAsync(pipeName, timeout, _logger, cancellationToken: default).ConfigureAwait(false);
         }
 
         private static string? GetDefaultPipeName()
         {
-            // BaseDirectory was mistakenly marked as nullable in 3.1
-            // https://github.com/dotnet/runtime/pull/32486
-            var clientDirectory = AppDomain.CurrentDomain.BaseDirectory!;
-            return BuildServerConnection.GetPipeNameForPath(clientDirectory);
+            return BuildServerConnection.GetPipeName(BuildClient.GetClientDirectory());
         }
 
         internal int RunServer(
@@ -173,19 +150,10 @@ namespace Microsoft.CodeAnalysis.CompilerServer
             return controller.RunServer(pipeName, compilerServerHost, clientConnectionHost, listener, keepAlive, cancellationToken);
         }
 
-        internal int RunShutdown(string pipeName, bool waitForProcess = true, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-        {
-            return RunShutdownAsync(pipeName, waitForProcess, timeout, cancellationToken).GetAwaiter().GetResult();
-        }
+        internal int RunShutdown(string pipeName, CancellationToken cancellationToken = default) =>
+            RunShutdownAsync(pipeName, waitForProcess: true, cancellationToken).GetAwaiter().GetResult();
 
-        /// <summary>
-        /// Shutting down the server is an inherently racy operation.  The server can be started or stopped by
-        /// external parties at any time.
-        /// 
-        /// This function will return success if at any time in the function the server is determined to no longer
-        /// be running.
-        /// </summary>
-        internal async Task<int> RunShutdownAsync(string pipeName, bool waitForProcess = true, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        internal async Task<int> RunShutdownAsync(string pipeName, bool waitForProcess, CancellationToken cancellationToken = default)
         {
             if (WasServerRunning(pipeName) == false)
             {

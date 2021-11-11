@@ -46,9 +46,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
         internal override SyntaxGeneratorInternal SyntaxGeneratorInternal => CSharpSyntaxGeneratorInternal.Instance;
 
-        internal override SyntaxTrivia EndOfLine(string text)
-            => SyntaxFactory.EndOfLine(text);
-
         internal override SyntaxTrivia Whitespace(string text)
             => SyntaxFactory.Whitespace(text);
 
@@ -90,10 +87,13 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 SyntaxFactory.List(nodes),
                 SyntaxFactory.Token(SyntaxKind.EndOfDocumentationCommentToken));
 
-            return docTrivia
-                .WithLeadingTrivia(SyntaxFactory.DocumentationCommentExterior("/// "))
-                .WithTrailingTrivia(trailingTrivia)
-                .WithTrailingTrivia(
+            docTrivia = docTrivia.WithLeadingTrivia(SyntaxFactory.DocumentationCommentExterior("/// "))
+                .WithTrailingTrivia(trailingTrivia);
+
+            if (lastWhitespaceTrivia == default)
+                return docTrivia.WithTrailingTrivia(SyntaxFactory.EndOfLine(endOfLineString));
+
+            return docTrivia.WithTrailingTrivia(
                 SyntaxFactory.EndOfLine(endOfLineString),
                 lastWhitespaceTrivia);
         }
@@ -147,12 +147,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             switch (declaration.Kind())
             {
                 case SyntaxKind.NamespaceDeclaration:
+                case SyntaxKind.FileScopedNamespaceDeclaration:
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.EnumDeclaration:
                 case SyntaxKind.DelegateDeclaration:
                 case SyntaxKind.RecordDeclaration:
+                case SyntaxKind.RecordStructDeclaration:
                     return declaration;
                 default:
                     return null;
@@ -254,7 +256,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             var modifierList = AsModifierList(accessibility, modifiers, SyntaxKind.OperatorDeclaration);
             var attributes = default(SyntaxList<AttributeListSyntax>);
 
-            if (kind == OperatorKind.ImplicitConversion || kind == OperatorKind.ExplicitConversion)
+            if (kind is OperatorKind.ImplicitConversion or OperatorKind.ExplicitConversion)
             {
                 return SyntaxFactory.ConversionOperatorDeclaration(
                     attributes, modifierList, SyntaxFactory.Token(GetTokenKind(kind)),
@@ -804,7 +806,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     // convert field into property
                     case SyntaxKind.FieldDeclaration:
                         var f = (FieldDeclarationSyntax)member;
-                        SyntaxFacts.GetAccessibilityAndModifiers(f.Modifiers, out acc, out modifiers, out _);
+                        GetAccessibilityAndModifiers(f.Modifiers, out acc, out modifiers, out _);
                         return this.AsInterfaceMember(
                             this.PropertyDeclaration(this.GetName(f), this.ClearTrivia(this.GetType(f)), acc, modifiers, getAccessorStatements: null, setAccessorStatements: null));
 
@@ -856,6 +858,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         var vd = fd.Declaration.Variables[0];
                         return (EnumMemberDeclarationSyntax)this.EnumMember(vd.Identifier.ToString(), vd.Initializer?.Value);
                     }
+
                     break;
             }
 
@@ -1069,6 +1072,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return this.GetAttributeArguments(list.Attributes[0]);
                     }
+
                     break;
                 case SyntaxKind.Attribute:
                     var attr = (AttributeSyntax)attributeDeclaration;
@@ -1076,6 +1080,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return attr.ArgumentList.Arguments;
                     }
+
                     break;
             }
 
@@ -1115,6 +1120,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return list.Attributes[0].ArgumentList;
                     }
+
                     break;
                 case SyntaxKind.Attribute:
                     var attr = (AttributeSyntax)declaration;
@@ -1134,6 +1140,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(declaration, list.Attributes[0], list.Attributes[0].WithArgumentList(argList));
                     }
+
                     break;
                 case SyntaxKind.Attribute:
                     var attr = (AttributeSyntax)declaration;
@@ -1171,10 +1178,10 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 : ImmutableArray<SyntaxNode>.Empty;
 
         public override IReadOnlyList<SyntaxNode> GetNamespaceImports(SyntaxNode declaration)
-            => declaration.Kind() switch
+            => declaration switch
             {
-                SyntaxKind.CompilationUnit => ((CompilationUnitSyntax)declaration).Usings,
-                SyntaxKind.NamespaceDeclaration => ((NamespaceDeclarationSyntax)declaration).Usings,
+                CompilationUnitSyntax compilationUnit => compilationUnit.Usings,
+                BaseNamespaceDeclarationSyntax namespaceDeclaration => namespaceDeclaration.Usings,
                 _ => SpecializedCollections.EmptyReadOnlyList<SyntaxNode>(),
             };
 
@@ -1185,17 +1192,12 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             var usingsToInsert = this.AsUsingDirectives(imports);
 
-            switch (declaration.Kind())
+            return declaration switch
             {
-                case SyntaxKind.CompilationUnit:
-                    var cu = (CompilationUnitSyntax)declaration;
-                    return cu.WithUsings(cu.Usings.InsertRange(index, usingsToInsert));
-                case SyntaxKind.NamespaceDeclaration:
-                    var nd = (NamespaceDeclarationSyntax)declaration;
-                    return nd.WithUsings(nd.Usings.InsertRange(index, usingsToInsert));
-                default:
-                    return declaration;
-            }
+                CompilationUnitSyntax cu => cu.WithUsings(cu.Usings.InsertRange(index, usingsToInsert)),
+                BaseNamespaceDeclarationSyntax nd => nd.WithUsings(nd.Usings.InsertRange(index, usingsToInsert)),
+                _ => declaration,
+            };
         }
 
         public override IReadOnlyList<SyntaxNode> GetMembers(SyntaxNode declaration)
@@ -1203,7 +1205,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             {
                 TypeDeclarationSyntax type => type.Members,
                 EnumDeclarationSyntax @enum => @enum.Members,
-                NamespaceDeclarationSyntax @namespace => @namespace.Members,
+                BaseNamespaceDeclarationSyntax @namespace => @namespace.Members,
                 CompilationUnitSyntax compilationUnit => compilationUnit.Members,
                 _ => SpecializedCollections.EmptyReadOnlyList<SyntaxNode>(),
             });
@@ -1242,6 +1244,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         {
                             builder.Add(attrList);
                         }
+
                         break;
 
                     default:
@@ -1309,7 +1312,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 {
                     TypeDeclarationSyntax type => type.WithMembers(type.Members.AddRange(newMembers)),
                     EnumDeclarationSyntax @enum => @enum.WithMembers(@enum.Members.AddRange(newMembers.OfType<EnumMemberDeclarationSyntax>())),
-                    NamespaceDeclarationSyntax @namespace => @namespace.WithMembers(@namespace.Members.AddRange(newMembers)),
+                    BaseNamespaceDeclarationSyntax @namespace => @namespace.WithMembers(@namespace.Members.AddRange(newMembers)),
                     CompilationUnitSyntax compilationUnit => compilationUnit.WithMembers(compilationUnit.Members.AddRange(newMembers)),
                     _ => declaration,
                 };
@@ -1320,30 +1323,28 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             => members?.Select(m => this.AsMemberOf(declaration, m)).OfType<MemberDeclarationSyntax>();
 
         private SyntaxNode AsMemberOf(SyntaxNode declaration, SyntaxNode member)
-        {
-            switch (declaration)
+            => declaration switch
             {
-                case InterfaceDeclarationSyntax:
-                    return this.AsInterfaceMember(member);
-                case TypeDeclarationSyntax typeDeclaration:
-                    return this.AsClassMember(member, typeDeclaration.Identifier.Text);
-                case EnumDeclarationSyntax:
-                    return this.AsEnumMember(member);
-                case NamespaceDeclarationSyntax:
-                    return AsNamespaceMember(member);
-                case CompilationUnitSyntax:
-                    return AsNamespaceMember(member);
-                default:
-                    return null;
-            }
-        }
+                InterfaceDeclarationSyntax => this.AsInterfaceMember(member),
+                TypeDeclarationSyntax typeDeclaration => this.AsClassMember(member, typeDeclaration.Identifier.Text),
+                EnumDeclarationSyntax => this.AsEnumMember(member),
+                BaseNamespaceDeclarationSyntax => AsNamespaceMember(member),
+                CompilationUnitSyntax => AsNamespaceMember(member),
+                _ => null,
+            };
+
+        private static bool CanHaveAccessibility(SyntaxNode declaration)
+            => CSharpAccessibilityFacts.Instance.CanHaveAccessibility(declaration);
 
         public override Accessibility GetAccessibility(SyntaxNode declaration)
-            => SyntaxFacts.GetAccessibility(declaration);
+            => CSharpAccessibilityFacts.Instance.GetAccessibility(declaration);
+
+        private static void GetAccessibilityAndModifiers(SyntaxTokenList modifierList, out Accessibility accessibility, out DeclarationModifiers modifiers, out bool isDefault)
+            => CSharpAccessibilityFacts.GetAccessibilityAndModifiers(modifierList, out accessibility, out modifiers, out isDefault);
 
         public override SyntaxNode WithAccessibility(SyntaxNode declaration, Accessibility accessibility)
         {
-            if (!SyntaxFacts.CanHaveAccessibility(declaration) &&
+            if (!CanHaveAccessibility(declaration) &&
                 accessibility != Accessibility.NotApplicable)
             {
                 return declaration;
@@ -1351,8 +1352,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             return this.Isolate(declaration, d =>
             {
-                var tokens = SyntaxFacts.GetModifierTokens(d);
-                SyntaxFacts.GetAccessibilityAndModifiers(tokens, out _, out var modifiers, out _);
+                var tokens = GetModifierTokens(d);
+                GetAccessibilityAndModifiers(tokens, out _, out var modifiers, out _);
                 var newTokens = Merge(tokens, AsModifierList(accessibility, modifiers));
                 return SetModifierTokens(d, newTokens);
             });
@@ -1455,7 +1456,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             DeclarationModifiers.Extern;
 
         private static readonly DeclarationModifiers s_lambdaModifiers =
-            DeclarationModifiers.Async;
+            DeclarationModifiers.Async |
+            DeclarationModifiers.Static;
 
         private static DeclarationModifiers GetAllowedModifiers(SyntaxKind kind)
         {
@@ -1476,6 +1478,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     return s_interfaceModifiers;
 
                 case SyntaxKind.StructDeclaration:
+                case SyntaxKind.RecordStructDeclaration:
                     return s_structModifiers;
 
                 case SyntaxKind.MethodDeclaration:
@@ -1527,10 +1530,13 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
         public override DeclarationModifiers GetModifiers(SyntaxNode declaration)
         {
-            var modifierTokens = SyntaxFacts.GetModifierTokens(declaration);
-            SyntaxFacts.GetAccessibilityAndModifiers(modifierTokens, out _, out var modifiers, out _);
+            var modifierTokens = GetModifierTokens(declaration);
+            GetAccessibilityAndModifiers(modifierTokens, out _, out var modifiers, out _);
             return modifiers;
         }
+
+        private static SyntaxTokenList GetModifierTokens(SyntaxNode declaration)
+            => CSharpAccessibilityFacts.GetModifierTokens(declaration);
 
         public override SyntaxNode WithModifiers(SyntaxNode declaration, DeclarationModifiers modifiers)
             => this.Isolate(declaration, d => this.WithModifiersInternal(d, modifiers));
@@ -1544,8 +1550,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             {
                 return this.Isolate(declaration, d =>
                 {
-                    var tokens = SyntaxFacts.GetModifierTokens(d);
-                    SyntaxFacts.GetAccessibilityAndModifiers(tokens, out var accessibility, out var tmp, out _);
+                    var tokens = GetModifierTokens(d);
+                    GetAccessibilityAndModifiers(tokens, out var accessibility, out var tmp, out _);
                     var newTokens = Merge(tokens, AsModifierList(accessibility, modifiers));
                     return SetModifierTokens(d, newTokens);
                 });
@@ -1565,7 +1571,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 LocalDeclarationStatementSyntax localDecl => localDecl.WithModifiers(modifiers),
                 LocalFunctionStatementSyntax localFunc => localFunc.WithModifiers(modifiers),
                 AccessorDeclarationSyntax accessor => accessor.WithModifiers(modifiers),
-                LambdaExpressionSyntax lambda => lambda.WithModifiers(modifiers),
+                AnonymousFunctionExpressionSyntax anonymous => anonymous.WithModifiers(modifiers),
                 _ => declaration,
             };
 
@@ -1740,7 +1746,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         }
 
         public override DeclarationKind GetDeclarationKind(SyntaxNode declaration)
-            => SyntaxFacts.GetDeclarationKind(declaration);
+            => CSharpAccessibilityFacts.GetDeclarationKind(declaration);
 
         public override string GetName(SyntaxNode declaration)
             => declaration switch
@@ -1752,7 +1758,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 PropertyDeclarationSyntax propertyDeclaration => propertyDeclaration.Identifier.ValueText,
                 EnumMemberDeclarationSyntax enumMemberDeclaration => enumMemberDeclaration.Identifier.ValueText,
                 EventDeclarationSyntax eventDeclaration => eventDeclaration.Identifier.ValueText,
-                NamespaceDeclarationSyntax namespaceDeclaration => namespaceDeclaration.Name.ToString(),
+                BaseNamespaceDeclarationSyntax namespaceDeclaration => namespaceDeclaration.Name.ToString(),
                 UsingDirectiveSyntax usingDirective => usingDirective.Name.ToString(),
                 ParameterSyntax parameter => parameter.Identifier.ValueText,
                 LocalDeclarationStatementSyntax localDeclaration => this.GetName(localDeclaration.Declaration),
@@ -1782,7 +1788,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 PropertyDeclarationSyntax propertyDeclaration => ReplaceWithTrivia(declaration, propertyDeclaration.Identifier, id),
                 EnumMemberDeclarationSyntax enumMemberDeclaration => ReplaceWithTrivia(declaration, enumMemberDeclaration.Identifier, id),
                 EventDeclarationSyntax eventDeclaration => ReplaceWithTrivia(declaration, eventDeclaration.Identifier, id),
-                NamespaceDeclarationSyntax namespaceDeclaration => ReplaceWithTrivia(declaration, namespaceDeclaration.Name, this.DottedName(name)),
+                BaseNamespaceDeclarationSyntax namespaceDeclaration => ReplaceWithTrivia(declaration, namespaceDeclaration.Name, this.DottedName(name)),
                 UsingDirectiveSyntax usingDeclaration => ReplaceWithTrivia(declaration, usingDeclaration.Name, this.DottedName(name)),
                 ParameterSyntax parameter => ReplaceWithTrivia(declaration, parameter.Identifier, id),
 
@@ -1833,6 +1839,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return this.GetType(declaration.Parent);
                     }
+
                     break;
             }
 
@@ -1880,6 +1887,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         {
                             return this.AsIsolatedDeclaration(vd.Parent);
                         }
+
                         break;
 
                     case SyntaxKind.VariableDeclarator:
@@ -1888,6 +1896,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         {
                             return this.ClearTrivia(WithVariable(v.Parent.Parent, v));
                         }
+
                         break;
 
                     case SyntaxKind.Attribute:
@@ -1897,6 +1906,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                             var attrList = (AttributeListSyntax)attr.Parent;
                             return attrList.WithAttributes(SyntaxFactory.SingletonSeparatedList(attr)).WithTarget(null);
                         }
+
                         break;
                 }
             }
@@ -1939,9 +1949,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             {
                 case SyntaxKind.VariableDeclaration:
                     var vd = (VariableDeclarationSyntax)declaration;
-                    if (CSharpSyntaxFacts.ParentIsFieldDeclaration(vd)
-                        || CSharpSyntaxFacts.ParentIsEventFieldDeclaration(vd)
-                        || CSharpSyntaxFacts.ParentIsLocalDeclarationStatement(vd))
+                    if (CSharpAccessibilityFacts.ParentIsFieldDeclaration(vd)
+                        || CSharpAccessibilityFacts.ParentIsEventFieldDeclaration(vd)
+                        || CSharpAccessibilityFacts.ParentIsLocalDeclarationStatement(vd))
                     {
                         return vd.Parent;
                     }
@@ -1956,6 +1966,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return GetFullDeclaration(declaration.Parent);
                     }
+
                     break;
             }
 
@@ -1967,7 +1978,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             switch (this.GetDeclarationKind(existingNode))
             {
                 case DeclarationKind.Class:
-                case DeclarationKind.RecordClass:
                 case DeclarationKind.Interface:
                 case DeclarationKind.Struct:
                 case DeclarationKind.Enum:
@@ -1978,6 +1988,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return this.AsMemberOf(container, newNode);
                     }
+
                     break;
 
                 case DeclarationKind.Attribute:
@@ -2021,7 +2032,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
         public override SyntaxNode InsertSwitchSections(SyntaxNode switchStatement, int index, IEnumerable<SyntaxNode> switchSections)
         {
-            if (!(switchStatement is SwitchStatementSyntax statement))
+            if (switchStatement is not SwitchStatementSyntax statement)
             {
                 return switchStatement;
             }
@@ -2106,6 +2117,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                             .WithLeadingTrivia(lambda.GetLeadingTrivia())
                             .WithTrailingTrivia(lambda.GetTrailingTrivia());
                     }
+                case SyntaxKind.RecordDeclaration:
+                case SyntaxKind.RecordStructDeclaration:
+                    return ((RecordDeclarationSyntax)declaration).WithParameterList((ParameterListSyntax)list);
                 default:
                     return declaration;
             }
@@ -2126,6 +2140,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return pd.ExpressionBody.Expression;
                     }
+
                     goto default;
 
                 case SyntaxKind.IndexerDeclaration:
@@ -2134,6 +2149,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return id.ExpressionBody.Expression;
                     }
+
                     goto default;
 
                 case SyntaxKind.MethodDeclaration:
@@ -2142,6 +2158,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return method.ExpressionBody.Expression;
                     }
+
                     goto default;
 
                 case SyntaxKind.LocalFunctionStatement:
@@ -2150,6 +2167,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return local.ExpressionBody.Expression;
                     }
+
                     goto default;
 
                 default:
@@ -2178,6 +2196,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(pd, pd.ExpressionBody.Expression, expr);
                     }
+
                     goto default;
 
                 case SyntaxKind.IndexerDeclaration:
@@ -2186,6 +2205,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(id, id.ExpressionBody.Expression, expr);
                     }
+
                     goto default;
 
                 case SyntaxKind.MethodDeclaration:
@@ -2194,6 +2214,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(method, method.ExpressionBody.Expression, expr);
                     }
+
                     goto default;
 
                 case SyntaxKind.LocalFunctionStatement:
@@ -2202,6 +2223,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(local, local.ExpressionBody.Expression, expr);
                     }
+
                     goto default;
 
                 default:
@@ -2239,6 +2261,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return fd.Declaration.Variables[0].Initializer;
                     }
+
                     break;
                 case SyntaxKind.PropertyDeclaration:
                     var pd = (PropertyDeclarationSyntax)declaration;
@@ -2249,6 +2272,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ld.Declaration.Variables[0].Initializer;
                     }
+
                     break;
                 case SyntaxKind.VariableDeclaration:
                     var vd = (VariableDeclarationSyntax)declaration;
@@ -2256,6 +2280,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return vd.Variables[0].Initializer;
                     }
+
                     break;
                 case SyntaxKind.VariableDeclarator:
                     return ((VariableDeclaratorSyntax)declaration).Initializer;
@@ -2276,6 +2301,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(declaration, fd.Declaration.Variables[0], fd.Declaration.Variables[0].WithInitializer(eq));
                     }
+
                     break;
                 case SyntaxKind.PropertyDeclaration:
                     var pd = (PropertyDeclarationSyntax)declaration;
@@ -2286,6 +2312,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(declaration, ld.Declaration.Variables[0], ld.Declaration.Variables[0].WithInitializer(eq));
                     }
+
                     break;
                 case SyntaxKind.VariableDeclaration:
                     var vd = (VariableDeclarationSyntax)declaration;
@@ -2293,6 +2320,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     {
                         return ReplaceWithTrivia(declaration, vd.Variables[0], vd.Variables[0].WithInitializer(eq));
                     }
+
                     break;
                 case SyntaxKind.VariableDeclarator:
                     return ((VariableDeclaratorSyntax)declaration).WithInitializer(eq);
@@ -2437,6 +2465,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         case SyntaxKind.SetAccessorDeclaration:
                             return (AccessorDeclarationSyntax)node;
                     }
+
                     break;
                 case SyntaxKind.EventDeclaration:
                     switch (node.Kind())
@@ -2445,6 +2474,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         case SyntaxKind.RemoveAccessorDeclaration:
                             return (AccessorDeclarationSyntax)node;
                     }
+
                     break;
             }
 
@@ -2848,6 +2878,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         // remove entire list if only one attribute
                         return this.RemoveNodeInternal(root, attrList, options);
                     }
+
                     break;
 
                 case SyntaxKind.AttributeArgument:
@@ -2856,6 +2887,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         // remove entire argument list if only one argument
                         return this.RemoveNodeInternal(root, declaration.Parent, options);
                     }
+
                     break;
 
                 case SyntaxKind.VariableDeclarator:
@@ -2865,6 +2897,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         // remove full declaration if only one declarator
                         return this.RemoveNodeInternal(root, full, options);
                     }
+
                     break;
 
                 case SyntaxKind.SimpleBaseType:
@@ -2873,6 +2906,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         // remove entire base list if this is the only base type.
                         return this.RemoveNodeInternal(root, baseList, options);
                     }
+
                     break;
 
                 default:
@@ -2885,6 +2919,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                                 return this.RemoveNodeInternal(root, parent, options);
                         }
                     }
+
                     break;
             }
 

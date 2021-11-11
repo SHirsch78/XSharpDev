@@ -524,16 +524,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
                     return false;
                 }
 
-                var oppositeType = castType.SpecialType == SpecialType.System_IntPtr ? SpecialType.System_UIntPtr : SpecialType.System_IntPtr;
-
                 // Given (nuint)(nint)myIntPtr we would normally suggest removing the (nint) cast as being identity
                 // but it is required as a means to get from IntPtr to nuint, and vice versa from UIntPtr to nint,
-                // so we check for an identity cast from [U]IntPtr to n[u]int, and a parent cast to the opposite.
+                // so we check for an identity cast from [U]IntPtr to n[u]int and then to a number type.
                 if (castedExpressionType.SpecialType == castType.SpecialType &&
                     !castedExpressionType.IsNativeIntegerType &&
                     castType.IsNativeIntegerType &&
-                    parentCastType.IsNativeIntegerType &&
-                    parentCastType.SpecialType == oppositeType)
+                    parentCastType.IsNumericType())
                 {
                     return true;
                 }
@@ -753,7 +750,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
         {
             // Logic copied from DiagnosticsPass_Warnings.CheckForBitwiseOrSignExtend.  Including comments.
 
-            if (!(expression is CastExpressionSyntax castExpression))
+            if (expression is not CastExpressionSyntax castExpression)
                 return false;
 
             var castRoot = castExpression.WalkUpParentheses();
@@ -868,7 +865,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
 
         private static ulong FindSurprisingSignExtensionBits(IOperation? operation, bool treatExplicitCastAsImplicit)
         {
-            if (!(operation is IConversionOperation conversion))
+            if (operation is not IConversionOperation conversion)
                 return 0;
 
             var from = conversion.Operand.Type;
@@ -917,6 +914,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
                     case 2: return unchecked((ulong)(ushort)recursive);
                     case 4: return unchecked((ulong)(uint)recursive);
                 }
+
                 Debug.Assert(false, "How did we get here?");
                 return recursive;
             }
@@ -1051,17 +1049,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
         private static bool IsInDelegateCreationExpression(
             ExpressionSyntax castNode, SemanticModel semanticModel)
         {
-            if (!(castNode.WalkUpParentheses().Parent is ArgumentSyntax argument))
+            if (castNode.WalkUpParentheses().Parent is not ArgumentSyntax argument)
             {
                 return false;
             }
 
-            if (!(argument.Parent is ArgumentListSyntax argumentList))
+            if (argument.Parent is not ArgumentListSyntax argumentList)
             {
                 return false;
             }
 
-            if (!(argumentList.Parent is ObjectCreationExpressionSyntax objectCreation))
+            if (argumentList.Parent is not ObjectCreationExpressionSyntax objectCreation)
             {
                 return false;
             }
@@ -1157,7 +1155,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
             // compiler: node.OperatorKind == BinaryOperatorKind.ObjectEqual || node.OperatorKind == BinaryOperatorKind.ObjectNotEqual
             castNode = castNode.WalkUpParentheses();
             var parent = castNode.Parent;
-            if (!(parent is BinaryExpressionSyntax binaryExpression))
+            if (parent is not BinaryExpressionSyntax binaryExpression)
                 return false;
 
             if (!binaryExpression.IsKind(SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression))
@@ -1171,7 +1169,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
                 return false;
 
             var operatorName = binaryMethod.Name;
-            if (operatorName != WellKnownMemberNames.EqualityOperatorName && operatorName != WellKnownMemberNames.InequalityOperatorName)
+            if (operatorName is not WellKnownMemberNames.EqualityOperatorName and not WellKnownMemberNames.InequalityOperatorName)
                 return false;
 
             // compiler: && ConvertedHasEqual(node.OperatorKind, node.Right, out t))
@@ -1339,7 +1337,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Simplification.Simplifiers
             {
                 // if the method is defined with errors: void M(params int wrongDefined), parameter.IsParams == true but parameter.Type is not an array.
                 // In such cases is better to be conservative and opt out.
-                if (!(parameter.Type is IArrayTypeSymbol parameterType))
+                if (parameter.Type is not IArrayTypeSymbol parameterType)
                 {
                     return true;
                 }

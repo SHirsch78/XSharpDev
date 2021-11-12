@@ -244,3 +244,4 @@ launchsettings.json
 /Tests/Applications/C386/Native_Resources.rc
 /Tests/Applications/C493/Resources/Native_Resources.rc
 /Tests/Applications/C541/Resources/Native_Resources.rc
+*.zip

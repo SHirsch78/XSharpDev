@@ -15,6 +15,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 #if XSHARP
 using LanguageService.CodeAnalysis.XSharp.SyntaxParser;
@@ -3147,11 +3148,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if XSHARP
                     TypeWithAnnotations parameterTypeWithAnnotations = XsGetCorrespondingParameterType(ref result, parameterTypes, arg);
                     argument = XsFixPszArgumentProblems(argument, parameterTypeWithAnnotations, ref kind);
-#else
+#endif
                     Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
-                    TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
-                    reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
-                    arguments[arg] = BindInterpolatedStringHandlerInMemberCall(argument, arguments, parameters, ref result, arg, receiverType, receiverEscapeScope, diagnostics);
 #if XSHARP
                     // Do not add Conversions for BoundAddressOf operator when compiling with /vo7+
                     if (argument is BoundAddressOfOperator bad &&
@@ -3175,8 +3173,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 #else
                     TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
                     reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
+                    arguments[arg] = BindInterpolatedStringHandlerInMemberCall(argument, arguments, parameters, ref result, arg, receiverType, receiverEscapeScope, diagnostics);
 
-                    arguments[arg] = CreateConversion(argument.Syntax, argument, kind, isCast: false, conversionGroupOpt: null, parameterTypeWithAnnotations.Type, diagnostics);
 #endif
                 }
                 else if (argument.Kind == BoundKind.OutVariablePendingInference)
@@ -8804,6 +8802,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     sealedDiagnostics = diagnostics.ToReadOnlyAndFree();
                 }
 #endif
+                return result;
+            }
+        }
 
 #nullable enable
         internal NamedTypeSymbol? GetMethodGroupDelegateType(BoundMethodGroup node)

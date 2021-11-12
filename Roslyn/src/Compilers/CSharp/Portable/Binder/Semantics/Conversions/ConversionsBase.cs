@@ -133,9 +133,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     return Conversion.NoConversion;
                 }
-#endif
-            }
 
+            }
+#endif
             conversion = GetImplicitUserDefinedConversion(sourceExpression, sourceType, destination, ref useSiteInfo);
             if (conversion.Exists)
             {

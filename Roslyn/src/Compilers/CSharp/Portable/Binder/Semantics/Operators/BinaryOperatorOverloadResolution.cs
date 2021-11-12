@@ -781,8 +781,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         continue;
                 }
 #endif
-                var convLeft = Conversions.ClassifyConversionFromExpression(left, op.LeftType, ref useSiteDiagnostics);
-                var convRight = Conversions.ClassifyConversionFromExpression(right, op.RightType, ref useSiteDiagnostics);
+                var convLeft = Conversions.ClassifyConversionFromExpression(left, op.LeftType, ref useSiteInfo);
+                var convRight = Conversions.ClassifyConversionFromExpression(right, op.RightType, ref useSiteInfo);
                 if (convLeft.IsImplicit && convRight.IsImplicit)
                 {
                     results.Add(BinaryOperatorAnalysisResult.Applicable(op, convLeft, convRight));

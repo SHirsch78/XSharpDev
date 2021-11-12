@@ -132,6 +132,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #else
                     return;
 #endif
+                        }
                 }
             }
         }

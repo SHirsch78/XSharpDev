@@ -672,13 +672,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         /// <remarks>The values are not affected by line mapping directives (<c>#line</c>).</remarks>
         public override FileLinePositionSpan GetLineSpan(TextSpan span, CancellationToken cancellationToken = default)
-        {
 #if XSHARP
-            return GetXNodeSpan(span);
+            => GetXNodeSpan(span);
 #else
             => new(FilePath, GetLinePosition(span.Start, cancellationToken), GetLinePosition(span.End, cancellationToken));
 #endif
-        }
 
         /// <summary>
         /// Gets the location in terms of path, line and column after applying source line mapping directives (<c>#line</c>).
@@ -734,7 +732,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #else
             => GetDirectiveMap().TranslateSpanAndVisibility(GetText(), FilePath, span, out isHiddenPosition);
 #endif
-        }
+        
 
         /// <summary>
         /// Gets a boolean value indicating whether there are any hidden regions in the tree.
@@ -807,7 +805,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private GeneratedKind _lazyIsGeneratedCode = GeneratedKind.Unknown;
 
-        private LinePosition GetLinePosition(int position)
+        private LinePosition GetLinePosition(int position, CancellationToken cancellationToken)
 #if XSHARP
             => GetXNodePosition(position);
 #else

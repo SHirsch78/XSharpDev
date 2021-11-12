@@ -1382,7 +1382,7 @@ symIsHidden:;
                                         RefineAccessThroughType(options, accessThroughType),
                                         out inaccessibleViaQualifier,
                                         ref useSiteInfo,
-                                        basesBeingResolved))
+                                        basesBeingResolved)
 #if XSHARP
                     && (!Compilation.Options.HasRuntime || !inaccessibleViaQualifier)
 #endif

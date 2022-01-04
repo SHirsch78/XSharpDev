@@ -11,7 +11,84 @@
       <para styleclass="Heading1">Version History</para>
     </header>
     <para styleclass="Body Text">Note: When an item has a matching GitHub ticket then the ticket number is behind the item in parentheses prefixed with #. You can find these tickets by going to: <br/>https://github.com/X-Sharp/XSharpPublic/issues/<text style="font-weight:bold;">nnn</text> where <text style="font-weight:bold;">nnn</text> is the ticket number.<br/>If you find an issue in X# we recommend that you report it on GitHub. You will be notified of the progress on the work on your issue and the ticket number will be included in the documentation of new builds from now on (April 2021).</para>
+    <para styleclass="Heading1">Changes in 2.10.0.0 </para>
+    <para styleclass="Heading1"><text styleclass="Heading2">Compiler</text></para>
+    <para styleclass="Body Text"><text styleclass="" style="font-family:Arial; font-size:12pt; font-weight:bold; color:#00a8d2;">Bug fixes</text></para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text">Fixed some problems with COPY TO ARRAY command in the FoxPro dialect (#673)</li>
+      <li styleclass="Body Text">Fixed a problem with using a System.Decimal type on a SWITCH statement (#725)</li>
+      <li styleclass="Body Text">Fixed an internal compiler error with Type() in the FoxPro dialect (#840)</li>
+      <li styleclass="Body Text">Fixed a problem with generating XML documentation (#783, #855)</li>
+      <li styleclass="Body Text">Prevented a warning from appearing for members of SEALED classes when /vo3 (all members VIRTUAL) is enabled (#785)</li>
+      <li styleclass="Body Text">Fixed problems with assigning and comparing &quot;ARRAY OF &lt;type&gt;&quot; vars to NULL_ARRAY (#833)</li>
+    </list>
+    <para styleclass="Heading3"><text styleclass="" style="font-family:Arial; font-size:12pt; font-weight:bold; color:#00a8d2;">New features</text></para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Added compiler option (/enforceoverride) to make the OVERRIDE modified mandatory when overriding a parent member (#786, #846)</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">The compiler now reports an error when using String2Psz() and Cast2Psz() in a non local context (since such PSZs are being released on exiting the current entity) (#775)</text></li>
+      <li styleclass="Body Text"><text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">FUNCTION</text>s and <text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">PROCEDURE</text>s now support the <text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">ASYNC</text> modifier (#853)</li>
+      <li styleclass="Body Text">You can now suppress the automatic generation of the $Init1() and $Exit() functions by passing the compiler commandline option /noinit (#854). This is NOT yet supported in the VS Properties dialog </li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Added support for the </text><text styleclass="Code Example" style="font-weight:bold; color:#ff0000;">ASTYPE</text><text style="font-weight:normal; font-style:normal; color:#000000;"> operator also for USUAL vars (#857)</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Allowed specifying </text><text styleclass="Code Example" style="font-weight:bold; color:#ff0000;">AS</text><text style="font-weight:normal; font-style:normal; color:#000000;"> &lt;type&gt; clause in </text><text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">PUBLIC</text><text style="font-weight:normal; font-style:normal; color:#000000;"> var declarations (ignored by the compiler, but used by the editor in the future for intellisense) (#853)</text></li>
+      <li styleclass="Body Text">The <text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">AS</text> &lt;datatype&gt; <text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">OF</text> &lt;classlib&gt; clause is now also supported for several other FoxPro compatible commands, such as PARAMETERS and PUBLIC.<br/>Since these variables are untyped at runtime by nature, the clause is ignored by the compiler and a warning is shown.</li>
+    </list>
+    <para styleclass="Heading1"><text styleclass="Heading2">Build System</text></para>
+    <para styleclass="Heading3">Bug Fixes</para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text">Running MsBuild on a X# WPF project could fail (#879)</li>
+    </list>
+    <para styleclass="Heading1"><text styleclass="Heading2">Visual Studio Integration</text></para>
+    <para styleclass="Heading3"><text styleclass="" style="font-family:Arial; font-size:12pt; font-weight:bold; color:#00a8d2;">New features</text></para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">We have added Visual Studio integration for </text><text style="font-weight:bold; font-style:normal; color:#000000;">VS 2022</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">We have added support for </text><text style="font-weight:bold; font-style:normal; color:#000000;">Package References</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Now XML comments are automatically inserted in the editor when the user types &quot;///&quot;. (#867, #887) Conditions:</text></li>
+      <list id="114" level="1" type="ul" listtype="bullet" formatstring="&#111;" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:&apos;Courier New&apos;; font-size:11pt; color:#000000;">
+        <li styleclass="Body Text"><tab /><text style="font-weight:normal; font-style:normal; color:#000000;">Cursor must be on a line before the start of an entity</text></li>
+        <li styleclass="Body Text"><tab /><text style="font-weight:normal; font-style:normal; color:#000000;">Cursor must NOT be before a comment line</text></li>
+      </list>
+    </list>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Now the tooltip on a class includes also information about the parent class and implemented interfaces (if any) (#860)</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">We have added tooltips, parameter completion etc for the pseudo functions that are built into the compiler, such as PCount() and String2Psz().</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">We have added a first version of Lightbulb tips. For now to implement missing interface members and to convert a field to a Property. More implementations and configuration options will follow</text></li>
+      <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">We have added a new dialog to configure source code formatting with visual examples of the effects of the options.</text></li>
+    </list>
+    <para styleclass="Heading3">Bug Fixes</para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text">Fixed some problems with the Format Document command (#552)</li>
+      <li styleclass="Body Text">Fixed several issues with Parameter Tooltips (#728, #843)</li>
+      <li styleclass="Body Text">Fixed problem with code completion list showing even for not defined vars/identifiers (#793)</li>
+      <li styleclass="Body Text">Fixed member completion and parameter tooltips with chained expressions (#838)</li>
+      <li styleclass="Body Text">Fixed recognition of type for VAR locals in some cases (#844)</li>
+      <li styleclass="Body Text">Fixed member completion and tooltip info problems with VOSTRUCT vars (#851)</li>
+      <li styleclass="Body Text">Fixed a problem with ignoring Line Breaks in XML Comments (#858)</li>
+      <li styleclass="Body Text">Fixed some WinForms designer problems with CHAR properties (#859)</li>
+      <li styleclass="Body Text">Fixed a problem with Goto Definition not working correctly with SUPER() constructor calls (#862)</li>
+      <li styleclass="Body Text">Fixed an error with the Rebuild Intellisense Database command, when the solution contains a space in the path (#865)</li>
+      <li styleclass="Body Text">Goto Definition for types from external assemblies was failing when there was more than one copy of VS running at the same time.</li>
+      <li styleclass="Body Text">Fixed a problem with a VOSTRUCT some times confusing the parser (#868)</li>
+      <li styleclass="Body Text">Fixed some more problems with quickinfo and member completion (#870)</li>
+      <li styleclass="Body Text">Fixed a problem in the Windows Forms designer (#873)</li>
+      <li styleclass="Body Text">Fixed an intellisense problem with ENUMs using no MEMBER keywords (#877)</li>
+    </list>
     <para styleclass="Body Text"></para>
+    <para styleclass="Heading1"><text styleclass="Heading2">Runtime</text></para>
+    <para styleclass="Heading3">Bug fixes</para>
+    <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
+      <li styleclass="Body Text">Fixed DBFCDX corruption that could happen with simultaneous updates (#585)</li>
+      <li styleclass="Body Text">Fixed a problem opening FoxPro tables with indexes on nullable fields (#631)</li>
+      <li styleclass="Body Text">The BlobGet() function was returning a LOGIC instead of the actual field value (#681)</li>
+      <li styleclass="Body Text">Greatly improved speed of index creation with large number of fields in the index expression (#711)</li>
+      <li styleclass="Body Text">Fixed some problems with &#160;FieldPutBytes() and FieldGetBytes() (#797)</li>
+      <li styleclass="Body Text">DBSeek() with 3rd param (lLast) TRUE had incorrect behavior in some cases (#807)</li>
+      <li styleclass="Body Text">Fixed a potential NullreferenceException that could happen when creating indexes (#849)</li>
+      <li styleclass="Body Text">Improved indentation in the text produced by the method Error.WrapRawException() (#856)</li>
+      <li styleclass="Body Text">Fixed a runtime problem when converting .Net Array &lt;-&gt; USUAL (#876)</li>
+      <li styleclass="Body Text">DbInfo() was returning TRUE even when an info enum was not supported.(#886)</li>
+      <li styleclass="Body Text">Fixed also a possible DBFNTX corruption problem (#889)</li>
+      <li styleclass="Body Text">DbEval() could fail in FoxPro when the codeblock was returning NIL or was VOID (#890)</li>
+    </list>
     <para styleclass="Heading1">Changes in 2.9.1.1 (Cahors)</para>
     <para styleclass="Heading1"><text styleclass="Heading2">Compiler</text></para>
     <para styleclass="Heading3"><text styleclass="" style="font-family:Arial; font-size:12pt; font-weight:bold; color:#00a8d2;">Bug fixes</text></para>
@@ -22,7 +99,6 @@
       <li styleclass="Body Text">Fixed a problem in the preprocessor that would occur when using a list rule like <text style="font-weight:bold; font-style:normal; color:#ff0000;">FIELDS</text><text style="font-weight:normal; font-style:normal; color:#000000;"> &lt;f1&gt; [,&lt;fn&gt; ] in the middle of a UDC.</text></li>
       <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">Fixed a problem compiling UDCs such as </text><text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">SET</text><text styleclass="Code Example" style="font-weight:normal; font-style:normal; color:#000000;">&#32;</text><text styleclass="Code Example" style="font-weight:bold; font-style:normal; color:#ff0000;">CENTURY</text><text styleclass="Code Example" style="font-weight:normal; font-style:normal; color:#000000;"> &amp;cOn </text>because <text styleclass="Code Example" style="font-weight:normal; font-style:normal; color:#000000;">cOn</text> was not parsed as an identifier but as a keyword.</li>
     </list>
-    <para styleclass="Body Text"><tab /></para>
     <para styleclass="Heading3"><text styleclass="" style="font-family:Arial; font-size:12pt; font-weight:bold; color:#00a8d2;">New features</text></para>
     <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
       <li styleclass="Body Text"><text style="font-weight:normal; font-style:normal; color:#000000;">There is a new result marker (the NotEmpty result marker) in the preprocessor that does the same as the regular result marker, but writes a NIL value to the output when the (optional) match marker is not found in the input. </text><br/><text style="font-weight:normal; font-style:normal; color:#000000;">This can be used when you want to make the result a part of an IIF() expression in the output, since the sections inside an IIF expression may not be empty.</text><br/><text style="font-weight:normal; font-style:normal; color:#000000;">The result marker looks like this: </text><text styleclass="Code Example" style="font-weight:normal; font-style:normal; color:#000000;">&lt;!marker!&gt;</text></li>
@@ -44,6 +120,13 @@
       <li styleclass="Body Text">The background process to load the types in the ClassView / ObjectView windows was slowing down the VS performance. This has been disabled for now.</li>
       <li styleclass="Body Text">Fixed type lookup for Generic types.</li>
       <li styleclass="Body Text">Hovering the mouse over a constructor keyword was showing a tooltip for the class and not for the constructor. This has been fixed.</li>
+      <li styleclass="Body Text">Fixed an issue in the code generator for Windows Forms for literal characters with special values (such as &apos;\0&apos;) (#859)</li>
+      <li styleclass="Body Text">Fixed an exception in the project system when the project system was initialized in the background (for example when no X# projects were opened) (#852)</li>
+      <li styleclass="Body Text">Fixed missing code completion for the LONGINT and SHORTINT keywords (#850)</li>
+      <li styleclass="Body Text">The context menu option &quot;View in Disassembler&quot; is now only shown for X# projects </li>
+      <li styleclass="Body Text">Fixed code generator problem with ARRAY OF &lt;type&gt; (#842)</li>
+      <li styleclass="Body Text">Fixed a performance problem when clicking on code in the editor (#829)</li>
+      <li styleclass="Body Text">Fixed a problem with loading Windows Forms when the lookup of a nested type failed.</li>
     </list>
     <para styleclass="Body Text"></para>
     <para styleclass="Heading3">New features</para>
@@ -74,6 +157,7 @@
     <para styleclass="Heading3">New features</para>
     <list id="114" type="ul" listtype="bullet" formatstring="&#183;" format-charset="SYMBOL_CHARSET" levelreset="true" legalstyle="false" startfrom="1" styleclass="Body Text" style="font-family:Symbol; font-size:11pt; color:#000000;">
       <li styleclass="Body Text">Added support for the &amp; operator (#835)</li>
+      <li styleclass="Body Text">Added support for parameters by reference (both @ and REF are supported) for late bound method calls (#818)</li>
     </list>
     <para styleclass="Heading1"><text styleclass="Heading2">VOXporter</text></para>
     <para styleclass="Heading3">Bug Fixes</para>

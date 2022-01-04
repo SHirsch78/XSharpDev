@@ -3143,14 +3143,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var kind = result.ConversionForArg(arg);
                 BoundExpression argument = arguments[arg];
 
-                if (kind.IsInterpolatedStringHandler)
-                {
 #if XSHARP
                     TypeWithAnnotations parameterTypeWithAnnotations = XsGetCorrespondingParameterType(ref result, parameterTypes, arg);
                     argument = XsFixPszArgumentProblems(argument, parameterTypeWithAnnotations, ref kind);
-#endif
                     Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
-#if XSHARP
                     // Do not add Conversions for BoundAddressOf operator when compiling with /vo7+
                     if (argument is BoundAddressOfOperator bad &&
                         this.Compilation.Options.HasOption(CompilerOption.ImplicitCastsAndConversions, argument.Syntax) &&
@@ -3171,10 +3167,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                             diagnostics: diagnostics);
                     }
 #else
+                if (kind.IsInterpolatedStringHandler)
+                {
+                    Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
                     TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
                     reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
                     arguments[arg] = BindInterpolatedStringHandlerInMemberCall(argument, arguments, parameters, ref result, arg, receiverType, receiverEscapeScope, diagnostics);
+                }
+                // https://github.com/dotnet/roslyn/issues/37119 : should we create an (Identity) conversion when the kind is Identity but the types differ?
+                else if (!kind.IsIdentity)
+                {
+                    TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
+                    reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
 
+                    arguments[arg] = CreateConversion(argument.Syntax, argument, kind, isCast: false, conversionGroupOpt: null, parameterTypeWithAnnotations.Type, diagnostics);
 #endif
                 }
                 else if (argument.Kind == BoundKind.OutVariablePendingInference)
@@ -8802,7 +8808,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     sealedDiagnostics = diagnostics.ToReadOnlyAndFree();
                 }
 #endif
-                return result;
+                // Note: the MethodGroupResolution instance is responsible for freeing its copy of analyzed arguments
+                return new MethodGroupResolution(methodGroup, null, result, AnalyzedArguments.GetInstance(analyzedArguments), methodGroup.ResultKind, sealedDiagnostics);
             }
         }
 

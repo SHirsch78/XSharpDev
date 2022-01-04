@@ -50,7 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
     }
     [FlagsAttribute]
-    enum XNodeFlags : byte
+    enum XNodeFlags : short
     {
         None = 0,
         XVodecl = 1 << 0,
@@ -61,6 +61,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         XDocComments = 1 << 5,
         XNeedsProcessing = 1 << 6,
         XIsChr = 1 << 7,
+        XDefaultTree = 1 << 8,
+        XIsString2Psz = 1 << 9,
     }
 
     internal abstract partial class CSharpSyntaxNode
@@ -97,6 +99,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             get => xflags.HasFlag(XNodeFlags.XIsChr);
             set => xflags = xflags.SetFlag(XNodeFlags.XIsChr, value);
+        }
+        public bool XDefaultTree
+        {
+            get => xflags.HasFlag(XNodeFlags.XDefaultTree);
+            set => xflags = xflags.SetFlag(XNodeFlags.XDefaultTree, value);
+        }
+        public bool XIsString2Psz
+        {
+            get => xflags.HasFlag(XNodeFlags.XIsString2Psz);
+            set => xflags = xflags.SetFlag(XNodeFlags.XIsString2Psz, value);
         }
     }
 
@@ -176,6 +188,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal bool XGenerated => CsGreen.XGenerated;
         internal bool XVoIsDim => CsGreen.XVoIsDim;
         internal bool XIsChr => CsGreen.XIsChr;
+        internal bool XIsString2Psz => CsGreen.XIsString2Psz;
+        internal bool XDefaultTree => CsGreen.XDefaultTree;
 
     }
 }

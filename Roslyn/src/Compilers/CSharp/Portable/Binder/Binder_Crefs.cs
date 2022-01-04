@@ -604,7 +604,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             MemberCrefSyntax memberSyntax,
             TypeArgumentListSyntax? typeArgumentListSyntax,
             out Symbol? ambiguityWinner,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
         {
             // If the syntax indicates arity zero, then we match methods of any arity.
             // However, if there are both generic and non-generic methods, then the

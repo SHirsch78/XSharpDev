@@ -2078,6 +2078,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_MethodSignatureChanged = 9106,
         ERR_NILByRefOrOut = 9107,
         WRN_MissingWithStatement = 9108,
+        ERR_BadAddressOfArg = 9109,
+        ERR_String2PszMustBeAssignedToLocal = 9110,
 
         // XPP dialect Error messages
         ERR_XPPMultipleInheritance = 9200,

@@ -47,12 +47,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                     options.AllowDotForInstanceMembers = positive;
                     encode = true;
                     break;
+                case "ast":
+                    options.DumpAST = positive;
+                    break;
                 case "az":
                     options.ArrayZero = positive;
                     encode = true;
                     break;
                 case "cf":
                     OptionNotImplemented(diagnostics, oldname, "Compiling for Compact Framework");
+                    break;
+                case "clr": // CLR
+                    OptionNotImplemented(diagnostics, oldname, "Specify CLR version");
+                    encode = true;
+                    break;
+                case "cs":
+                    options.CaseSensitive = positive;
+                    XSharpString.CaseSensitive = positive;
                     break;
                 case "dialect":
                     XSharpDialect dialect = XSharpDialect.Core;
@@ -66,13 +77,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     options.Dialect = dialect;
                     break;
-                case "clr": // CLR
-                    OptionNotImplemented(diagnostics, oldname, "Specify CLR version");
-                    encode = true;
+                case "enforceoverride":
+                    options.EnforceOverride = positive;
                     break;
-                case "cs":
-                    options.CaseSensitive = positive;
-                    XSharpString.CaseSensitive = positive;
+                case "enforceself":       // SELF: or THIS. is mandatory
+                    options.EnforceSelf = positive;
+                    encode = true;
                     break;
                 case "i":
                     if (value == null)
@@ -102,6 +112,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     encode = true;
                     break;
 
+                case "namedargs":
                 case "namedarguments":
                     options.AllowNamedArguments = positive;
                     encode = true;
@@ -157,12 +168,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     options.MemVars = positive;
                     encode = true;
                     break;
-                case "undeclared":
-                    options.UndeclaredMemVars = positive;
-                    encode = true;
-                    break;
-                case "parseonly":
-                    options.ParseLevel = ParseLevel.Parse;
+                case "noinit":
+                    options.SuppressInit1 = positive;
                     break;
                 case "out":
                     if (!string.IsNullOrEmpty(value))
@@ -221,6 +228,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                     }
                     handled = false;
+                    break;
+                case "parseonly":
+                    options.ParseLevel = ParseLevel.Parse;
                     break;
                 case "ppo":
                     options.PreProcessorOutput = positive;
@@ -284,12 +294,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                         options.StdDefs = value;
                     }
                     break;
-
                 case "tocs":
                     options.SaveAsCSharp = positive;
                     break;
-                case "ast":
-                    options.DumpAST = positive;
+                case "undeclared":
+                    options.UndeclaredMemVars = positive;
+                    encode = true;
                     break;
                 case "usenativeversion":
                     options.UseNativeVersion = positive;
@@ -370,9 +380,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     options.Xpp1 = positive;
                     encode = true;
                     break;
-                case "xpp2":       // untyped main instead of Start
-                    options.Xpp2 = positive;
-                    encode = true;
+                case "xpp2":       // ignored
+                    //options.Xpp2 = positive;
+                    //encode = true;
                     break;
                 case "fox1":       // Classes inherit from unknown
                     options.Fox1 = positive;
@@ -386,10 +396,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     options.AllowUnsafe = positive;
                     handled = false;    // there is also an 'unsafe' option in Roslyn
                     name = oldname;
-                    break;
-                case "enforceself":       // SELF: or THIS. is mandatory
-                    options.EnforceSelf = positive;
-                    encode = true;
                     break;
 
                 default:
@@ -538,12 +544,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             var newDialect = options.Dialect;
             if (options.Dialect == XSharpDialect.Core)
             {
-                if (!options.ExplicitOptions.HasFlag(CompilerOption.NamedArgs))
+                if (!options.ExplicitOptions.HasFlag(CompilerOption.AllowNamedArgs))
                     options.AllowNamedArguments = true;
             }
             else
             {
-                if (!options.ExplicitOptions.HasFlag(CompilerOption.NamedArgs))
+                if (!options.ExplicitOptions.HasFlag(CompilerOption.AllowNamedArgs))
                     options.AllowNamedArguments = false;
                 //if (!options.ExplicitOptions.HasFlag(CompilerOption.EnforceSelf))
                 //    options.EnforceSelf = true;
@@ -673,10 +679,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
             }
-            if (options.Xpp1 || options.Xpp2)
+            if (options.Xpp1 )
             {
                 if (options.Dialect != XSharpDialect.XPP)
-                    AddDiagnostic(diagnostics, ErrorCode.ERR_IllegalCombinationOfCommandLineOptions, "/xpp1 and /xpp2 are only valid for the Xbase++ dialect");
+                    AddDiagnostic(diagnostics, ErrorCode.ERR_IllegalCombinationOfCommandLineOptions, "/xpp1 is only valid for the Xbase++ dialect");
             }
 
             if (options.UndeclaredMemVars && !options.MemVars)

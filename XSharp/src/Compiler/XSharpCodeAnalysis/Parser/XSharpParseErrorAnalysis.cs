@@ -189,7 +189,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             if (context.ExpressionBody != null)
             {
-                var parent = context.Parent as XSharpParser.IEntityWithBodyContext;
+                var parent = context.Parent as XSharpParser.IMemberWithBodyContext;
                 if (parent != null && parent.Statements != null)
                 {
                     if (parent.Statements._Stmts.Count > 0)
@@ -367,7 +367,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         if (tokens.Count >= 6 && tokens[3].Type == XSharpParser.COMMA && tokens[5].Type == XSharpParser.RPAREN)
                         {
                             i2 = tokens[4];
-                            numbers.Add( tokens[2] );
+                            numbers.Add(tokens[2]);
                         }
                         else if (tokens.Count >= 4 && tokens[3].Type == XSharpParser.RPAREN)
                         {
@@ -394,7 +394,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (i1 == null) 
             {
                 error = ErrorCode.WRN_IllegalPragma;
-                errortoken = context.P; 
+                errortoken = context.P;
             }
             if (error == ErrorCode.Unknown)
             {
@@ -449,7 +449,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 if (isWarning)
                 {
-                    context.Pragma = new PragmaWarning(context, state, numbers,i1,i2);
+                    context.Pragma = new PragmaWarning(context, state, numbers, i1, i2);
                 }
                 else if (numbers.Count == 0)
                 {
@@ -479,16 +479,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                                 ErrorCode.ERR_CompilerOptionNotSupportedForDialect, opt,compopt.Description(), _options.Dialect);
                             _parseErrors.Add(errdata);
                         }
-
+                        // options sorted in alphabetical order with the exception of the fox and xpp options
                         switch (compopt)
                         {
-                            case CompilerOption.Overflow:
                             case CompilerOption.AllowDotForInstanceMembers:
                             case CompilerOption.ArrayZero:
+                            case CompilerOption.EnforceOverride:
+                            case CompilerOption.EnforceSelf:
                             case CompilerOption.InitLocals:
                             case CompilerOption.LateBinding:
                             case CompilerOption.MemVars:
-                            case CompilerOption.EnforceSelf:
+                            case CompilerOption.Overflow:
                             case CompilerOption.UndeclaredMemVars:
                             // case "vo1": // Init/axit
                             case CompilerOption.Vo2:     // Initialize string variables with empty strings
@@ -523,7 +524,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         }
                     }
                 }
-
             }
 
             // C# does not validate the error codes, so we will not do that either.

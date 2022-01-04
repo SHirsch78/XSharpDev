@@ -28,7 +28,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     internal partial class Binder
     {
 
-        private bool BindVOPointerDereference(CastExpressionSyntax node, TypeWithAnnotations targetType, BoundExpression operand, 
+        private bool BindVOPointerDereference(CastExpressionSyntax node, TypeWithAnnotations targetType, BoundExpression operand,
             DiagnosticBag diagnostics, out BoundExpression expression)
         {
             // Type(pPointer) -> Dereference pointer
@@ -210,7 +210,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         numericParams = true;
                     }
                 }
-                if (cf.IsArrayType() || numericParams ) 
+                if (cf.IsArrayType() || numericParams )
                 {
                     ImmutableArray<BoundExpression> args;
                     ArrayBuilder<BoundExpression> argsBuilder = ArrayBuilder<BoundExpression>.GetInstance();
@@ -222,7 +222,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         ++argno;
                         mustBeNumeric = true;
                         if (Compilation.Options.XSharpRuntime  && TypeSymbol.Equals(cf, namedIndexerType))
-                        { 
+                        {
                             mustBeNumeric = argno == 1;
                         }
                         if (mustBeNumeric)
@@ -314,29 +314,40 @@ namespace Microsoft.CodeAnalysis.CSharp
         private bool CheckValidRefOmittedArguments(OverloadResolutionResult<MethodSymbol> result, AnalyzedArguments analyzedArguments, DiagnosticBag diagnostics)
         {
             var member = result.ValidResult.Member;
-            
             for (int i = 0; i < analyzedArguments.Arguments.Count; i++)
             {
                 var parNumber = result.ValidResult.Result.ParameterFromArgument(i);
                 var parRefKind = member.Parameters[parNumber].RefKind;
-
-                if (analyzedArguments.RefKind(i) == RefKind.None &&  parRefKind != RefKind.None)
+                var arg = analyzedArguments.Arguments[i];
+                var isBoundAddress = arg is BoundAddressOfOperator;
+                var isRefKindMismatch = analyzedArguments.RefKind(i) == RefKind.None && parRefKind != RefKind.None;
+                if (isRefKindMismatch || isBoundAddress)
                 {
-                    var arg = analyzedArguments.Arguments[i];
-
                     if (Compilation.Options.HasOption(CompilerOption.ImplicitCastsAndConversions, arg.Syntax))
                     {
                         bool adjust = false;
-                        if (arg is BoundAddressOfOperator)
+                        if (isBoundAddress)
                         {
-                            arg = (arg as BoundAddressOfOperator).Operand;
-                            adjust = true;
+                            var baoo = (BoundAddressOfOperator)arg;
+                            var isDecl = false;
+                            if (baoo.Operand.Kind == BoundKind.Local)
+                            {
+                                var local = (BoundLocal)baoo.Operand;
+                                var decl = local.LocalSymbol.DeclaringSyntaxReferences[0];
+                                var decl1 = decl.GetSyntax() as CSharpSyntaxNode;
+                                isDecl = decl1.XVoIsDecl;
+                            }
+                            if (!isDecl)
+                            {
+                                arg = baoo.Operand;
+                                adjust = true;
+                            }
                         }
                         else if (arg is BoundLiteral bl && bl.IsLiteralNull())
                         {
                             adjust = false;
                         }
-                        else
+                        else if (isRefKindMismatch)
                         {
                             adjust = true;
                             Error(diagnostics, ErrorCode.WRN_AutomaticRefGeneration, arg.Syntax, i + 1, parRefKind);
@@ -364,8 +375,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                         }
                     }
-                    
-                    if (!CheckValueKind(arg.Syntax, arg, BindValueKind.RefOrOut, checkingReceiver: false, diagnostics: diagnostics))
+                    if (isRefKindMismatch && !CheckValueKind(arg.Syntax, arg, BindValueKind.RefOrOut, checkingReceiver: false, diagnostics: diagnostics))
                         return false;
                 }
             }
@@ -405,9 +415,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return true;
         }
         private BoundExpression TryBindLateBoundCall(
-            ExpressionSyntax node, 
-            BoundExpression boundLeft, 
-            TypeSymbol leftType, 
+            ExpressionSyntax node,
+            BoundExpression boundLeft,
+            TypeSymbol leftType,
             SimpleNameSyntax right,
             bool invoked,
             bool indexed,
@@ -891,7 +901,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // Xs$Memvar->Memvarname
                     // Xs$Field->Memvar
                     // or the left hand side of a Foxpro Customer.LastName syntax
-                    // 
+                    //
                     var parts = name.Split(new string[] { "->" }, StringSplitOptions.None);
                     if (parts.Length == 2)
                     {
@@ -965,11 +975,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             var parent = node.XNode as XSharpParserRuleContext;
                             while (parent != null)
                             {
-                                if (parent is IEntityContext)
+                                if (parent is IMemberContext)
                                     break;
                                 parent = parent.Parent as XSharpParserRuleContext;
                             }
-                            if (parent is IEntityContext iec)
+                            if (parent is IMemberContext iec)
                             {
                                 iec.Data.HasUndeclared = true;
                             }
@@ -1095,7 +1105,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var xnode = node.Parent.XNode;
                 if (xnode != null)
-                { 
+                {
                     if (xnode is ArrayElementContext)
                     {
                         xnode = ((ArrayElementContext)xnode).Expr;

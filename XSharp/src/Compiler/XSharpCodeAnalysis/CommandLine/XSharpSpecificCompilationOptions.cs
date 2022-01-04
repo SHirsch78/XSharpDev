@@ -57,11 +57,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         public ParseLevel ParseLevel { get; set; } = ParseLevel.Complete;
         public bool PreProcessorOutput { get; internal set; } = false;
         public bool SaveAsCSharp { get; internal set; } = false;
+        public bool EnforceOverride { get; internal set; } = false;
         public bool DumpAST { get; internal set; } = false;
         public bool ShowDefs { get; internal set; } = false;
         public bool EnforceSelf { get; internal set; } = false;
         public bool ShowIncludes { get; internal set; } = false;
         public string StdDefs { get; internal set; } = string.Empty;
+        public bool SuppressInit1 { get; internal set; } = false;
         public XSharpTargetDLL TargetDLL { get; internal set; } = XSharpTargetDLL.Other;
         public bool Verbose { get; internal set; } = false;
         public bool Vo1 { get; internal set; } = false;
@@ -81,7 +83,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         public bool Vo15 { get; internal set; } = false;
         public bool Vo16 { get; internal set; } = false;
         public bool Xpp1 { get; internal set; } = false;
-        public bool Xpp2 { get; internal set; } = false;
         public bool Fox1 { get; internal set; } = false;
         public bool Fox2 { get; internal set; } = false;
         public bool VulcanRTFuncsIncluded => RuntimeAssemblies.HasFlag(RuntimeAssemblies.VulcanRTFuncs);
@@ -102,8 +103,48 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public void SetOption(CompilerOption option, bool value)
         {
+            // options in alphabetical order
             switch (option)
             {
+                case CompilerOption.AllowDotForInstanceMembers:
+                    AllowDotForInstanceMembers = value;
+                    break;
+                case CompilerOption.AllowNamedArgs:
+                    AllowNamedArguments = value;
+                    break;
+                case CompilerOption.ArrayZero:
+                    ArrayZero = value;
+                    break;
+                case CompilerOption.EnforceSelf:
+                    EnforceSelf = value;
+                    break;
+                case CompilerOption.EnforceOverride:
+                    EnforceOverride = value;
+                    break;
+                case CompilerOption.Fox1:
+                    Fox1 = value;
+                    break;
+                case CompilerOption.Fox2:
+                    Fox2 = value;
+                    break;
+                case CompilerOption.ImplicitNamespace:
+                    ImplicitNameSpace = value;
+                    break;
+                case CompilerOption.InitLocals:
+                    InitLocals = value;
+                    break;
+                case CompilerOption.LateBinding:
+                    LateBinding = value;
+                    break;
+                case CompilerOption.MemVars:
+                    MemVars = value;
+                    break;
+                case CompilerOption.Overflow:
+                    Overflow = value;
+                    break;
+                case CompilerOption.UndeclaredMemVars:
+                    UndeclaredMemVars = value;
+                    break;
                 case CompilerOption.Vo1:
                     Vo1 = value;
                     break;
@@ -152,41 +193,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case CompilerOption.Vo16:
                     Vo16 = value;
                     break;
-                case CompilerOption.Fox1:
-                    Fox1 = value;
-                    break;
-                case CompilerOption.Fox2:
-                    Fox2 = value;
-                    break;
                 case CompilerOption.Xpp1:
                     Xpp1 = value;
                     break;
-                case CompilerOption.Xpp2:
-                    Xpp2= value;
-                    break;
-                case CompilerOption.MemVars:
-                    MemVars = value;
-                    break;
-                case CompilerOption.UndeclaredMemVars:
-                    UndeclaredMemVars = value;
-                    break;
-                case CompilerOption.LateBinding:
-                    LateBinding = value;
-                    break;
-                case CompilerOption.ImplicitNamespace:
-                    ImplicitNameSpace = value;
-                    break;
-                case CompilerOption.ArrayZero:
-                    ArrayZero = value;
-                    break;
-                case CompilerOption.AllowDotForInstanceMembers:
-                    AllowDotForInstanceMembers = value;
-                    break;
-                case CompilerOption.Overflow:
-                    Overflow = value;
-                    break;
-                case CompilerOption.EnforceSelf:
-                    EnforceSelf = value;
+                case CompilerOption.ClrVersion:
+                case CompilerOption.None:
+                default:
+                    // n/a
                     break;
             }
         }
@@ -238,6 +251,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         None = 0,
         Overflow = 1 << 0,
         Vo1 = 1 << 1,
+        InitAxitConstructorDestructor = Vo1,
         Vo2 = 1 << 2,
         NullStrings = Vo2,
         Vo3 = 1 << 3,
@@ -251,6 +265,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         Vo7 = 1 << 7,
         ImplicitCastsAndConversions = Vo7,
         Vo8 = 1 << 8,
+        CompatiblePreprocessor = Vo8,
         Vo9 = 1 << 9,
         AllowMissingReturns = Vo9,
         Vo10 = 1 << 10,
@@ -268,12 +283,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         Vo16 = 1 << 16,
         DefaultClipperContructors = Vo16,
         Xpp1 = 1 << 17,
-        Xpp2 = 1 << 18,
+        //Xpp2 = 1 << 18,
         Fox1 = 1 << 19,
         Fox2 = 1 << 20,
         FoxArraySupport = Fox2,
         InitLocals = 1 << 21,
-        NamedArgs = 1 << 22,
+        AllowNamedArgs = 1 << 22,
         ArrayZero = 1 << 23,
         LateBinding = 1 << 24,
         ImplicitNamespace = 1 << 25,
@@ -282,38 +297,91 @@ namespace Microsoft.CodeAnalysis.CSharp
         ClrVersion = 1 << 28,
         EnforceSelf = 1 << 29,
         AllowDotForInstanceMembers = 1 << 30,
-        All = -1
-
+        EnforceOverride = 1 << 31,
+        All = -1,       // used for Push/Pop
     }
 
     internal static class CompilerOptionDecoder
     {
         public static bool NeedsRuntime(this CompilerOption option)
         {
+            // sorted alphabetically
             switch (option)
             {
-                case CompilerOption.Vo5:
-                case CompilerOption.Vo6:
-                case CompilerOption.Vo7:
-                case CompilerOption.Vo11:
-                case CompilerOption.Vo12:
-                case CompilerOption.Vo13:
-                case CompilerOption.Vo14:
-                case CompilerOption.Vo15:
-                case CompilerOption.Vo16:
+                case CompilerOption.ArithmeticConversions:
+                case CompilerOption.ClipperCallingConvention:
+                case CompilerOption.ClipperIntegerDivisions:
+                case CompilerOption.DefaultClipperContructors:
+                case CompilerOption.FloatConstants:
+                case CompilerOption.Fox1:
+                case CompilerOption.Fox2:
+                case CompilerOption.ImplicitCastsAndConversions:
                 case CompilerOption.MemVars:
+                case CompilerOption.ResolveTypedFunctionPointersToPtr:
+                case CompilerOption.StringComparisons:
                 case CompilerOption.UndeclaredMemVars:
+                case CompilerOption.UntypedAllowed:
+                case CompilerOption.Xpp1:
+                //case CompilerOption.Xpp2:
                     return true;
+                case CompilerOption.AllowDotForInstanceMembers:
+                case CompilerOption.AllowMissingReturns:
+                case CompilerOption.AllowNamedArgs:
+                case CompilerOption.ArrayZero:
+                case CompilerOption.ClrVersion:
+                case CompilerOption.CompatibleIIF:
+                case CompilerOption.CompatiblePreprocessor:
+                case CompilerOption.EnforceOverride:
+                case CompilerOption.EnforceSelf:
+                case CompilerOption.ImplicitNamespace:
+                case CompilerOption.InitAxitConstructorDestructor:
+                case CompilerOption.InitLocals:
+                case CompilerOption.LateBinding:
+                case CompilerOption.None:
+                case CompilerOption.NullStrings:
+                case CompilerOption.Overflow:
+                case CompilerOption.SignedUnsignedConversion:
+                case CompilerOption.VirtualInstanceMethods:
+                    return false;
+                default:
+                    break;
             }
             return false;
         }
 
         internal static string Description(this CompilerOption option)
         {
+            // options sorted in alphabetical order
             switch (option)
             {
+                case CompilerOption.AllowDotForInstanceMembers:
+                    return "Instance Dot operator for instance members"; ;
+                case CompilerOption.ArrayZero:
+                    return "Use Zero Based Arrays";
+                case CompilerOption.ClrVersion:
+                    break;
+                case CompilerOption.EnforceOverride:
+                    return "OVERRIDE must be explicitely used in the source code"; ;
+                case CompilerOption.EnforceSelf:
+                    return "Instance Method calls inside a class require a SELF prefix";
+                case CompilerOption.Fox1:
+                    return "All Classes inherit from unknown";
+                case CompilerOption.Fox2:
+                    break;
+                case CompilerOption.ImplicitNamespace:
+                    return "Enable Implicit Namespace lookups";
+                case CompilerOption.InitLocals:
+                    return "Initialize all local variables and fields";
+                case CompilerOption.LateBinding:
+                    return "Enable Late Binding";
+                case CompilerOption.MemVars:
+                    return "PRIVATE and or PUBLIC variables";
+                case CompilerOption.AllowNamedArgs:
+                    return "Allow Named Arguments";
                 case CompilerOption.Overflow:
                     return "Overflow Exceptions";
+                case CompilerOption.UndeclaredMemVars:
+                    return "Undeclared Memory Variables";
                 case CompilerOption.Vo1:
                     return "Init() & Axit() methods mapped to constructor and destructor";
                 case CompilerOption.Vo2:
@@ -348,45 +416,26 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "Generate Clipper calling convention constructors for classes without constructor";
                 case CompilerOption.Xpp1:
                     return "All classes inherit from XPP.Abstract";
-                case CompilerOption.Xpp2:
-                    break;
-                case CompilerOption.Fox1:
-                    return "All Classes inherit from unknown";
-                case CompilerOption.Fox2:
-                    break;
-                case CompilerOption.InitLocals:
-                    return "Initialize all local variables and fields";
-                case CompilerOption.NamedArgs:
-                    break;
-                case CompilerOption.ArrayZero:
-                    return "Use Zero Based Arrays";
-                case CompilerOption.LateBinding:
-                    return "Enable Late Binding";
-                case CompilerOption.ImplicitNamespace:
-                    return "Enable Implicit Namespace lookups";
-                case CompilerOption.MemVars:
-                    return "PRIVATE and or PUBLIC variables";
-                case CompilerOption.UndeclaredMemVars:
-                    return "Undeclared Memory Variables";
-                case CompilerOption.ClrVersion:
-                    break;
-                case CompilerOption.EnforceSelf:
-                    return "Instance Method calls inside a class require a SELF prefix";
-                case CompilerOption.AllowDotForInstanceMembers:
-                    return "Instance Dot operator for instance members"; ;
-                case CompilerOption.All:
-                    break;
+                //case CompilerOption.Xpp2:
+                //    return "n/a";
+                case CompilerOption.None:
+                    return "";
             }
             return "";
         }
         internal static CompilerOption Decode(string option)
         {
+            // options sorted in alphabetical order
             switch (option.ToLower())
             {
                 case "allowdot":
                     return CompilerOption.AllowDotForInstanceMembers;
                 case "az":
                     return CompilerOption.ArrayZero;
+                case "enforceoverride":
+                    return CompilerOption.EnforceOverride;
+                case "enforceself":
+                    return CompilerOption.EnforceSelf;
                 case "fovf":
                     return CompilerOption.Overflow;
                 case "fox1":
@@ -403,11 +452,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case "memvars":
                     return CompilerOption.MemVars;
                 case "namedarguments":
-                    return CompilerOption.NamedArgs;
+                    return CompilerOption.AllowNamedArgs;
                 case "ovf":
                     return CompilerOption.Overflow;
-                case "enforceself":
-                    return CompilerOption.EnforceSelf;
                 case "undeclared":
                     return CompilerOption.UndeclaredMemVars;
                 case "vo1":
@@ -444,8 +491,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return CompilerOption.Vo16;
                 case "xpp1":
                     return CompilerOption.Xpp1;
-                case "xpp2":
-                    return CompilerOption.Xpp2;
+                //case "xpp2":
+                //    return CompilerOption.Xpp2;
                 default:
                     break;
             }

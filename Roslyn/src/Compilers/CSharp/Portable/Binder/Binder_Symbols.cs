@@ -913,6 +913,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!includeNameSpace)
                 options |= LookupOptions.ExcludeNameSpaces;
 #endif
+            CompoundUseSiteInfo<AssemblySymbol> useSiteInfo = GetNewCompoundUseSiteInfo(diagnostics);
 
             this.LookupSymbolsSimpleName(result, qualifierOpt, identifierValueText, 0, basesBeingResolved, options, diagnose: true, useSiteInfo: ref useSiteInfo);
             diagnostics.Add(node, useSiteInfo);
@@ -2191,7 +2192,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     for (int i = 0; i < symbols.Count; i++)
                     {
-                        ReportUseSiteDiagnostics(symbols[i], diagnostics, where);
+                        ReportUseSite(symbols[i], diagnostics, where);
                     }
                 }
 
@@ -2396,7 +2397,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <remarks>
         /// This is only intended to be called when the type isn't found (i.e. not when it is found but is inaccessible, has the wrong arity, etc).
         /// </remarks>
-        private CSDiagnosticInfo NotFound(SyntaxNode where, string simpleName, int arity, string whereText, DiagnosticBag diagnostics, string aliasOpt, NamespaceOrTypeSymbol qualifierOpt, LookupOptions options)
+        private CSDiagnosticInfo NotFound(SyntaxNode where, string simpleName, int arity, string whereText, BindingDiagnosticBag diagnostics, string aliasOpt, NamespaceOrTypeSymbol qualifierOpt, LookupOptions options)
         {
             var location = where.Location;
             // Lookup totally ignores type forwarders, but we want the type lookup diagnostics
@@ -2535,7 +2536,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Since this method is intended to be used for error reporting, it stops as soon as it finds
         /// any type forwarder (or an error to report). It does not check other assemblies for consistency or better results.
         /// </remarks>
-        protected AssemblySymbol GetForwardedToAssembly(string name, int arity, ref NamespaceOrTypeSymbol qualifierOpt, DiagnosticBag diagnostics, Location location)
+        protected AssemblySymbol GetForwardedToAssembly(string name, int arity, ref NamespaceOrTypeSymbol qualifierOpt, BindingDiagnosticBag diagnostics, Location location)
         {
             // If we are in the process of binding assembly level attributes, we might get into an infinite cycle
             // if any of the referenced assemblies forwards type to this assembly. Since forwarded types
@@ -2588,14 +2589,24 @@ namespace Microsoft.CodeAnalysis.CSharp
 #nullable enable
         internal static bool CheckFeatureAvailability(SyntaxNode syntax, MessageID feature, BindingDiagnosticBag diagnostics, Location? location = null)
         {
+            return CheckFeatureAvailability(syntax, feature, diagnostics.DiagnosticBag, location);
+        }
+
+        internal static bool CheckFeatureAvailability(SyntaxNode syntax, MessageID feature, DiagnosticBag? diagnostics, Location? location = null)
+        {
             return CheckFeatureAvailability(syntax.SyntaxTree, feature, diagnostics, location ?? syntax.GetLocation());
         }
 
         internal static bool CheckFeatureAvailability(SyntaxTree tree, MessageID feature, BindingDiagnosticBag diagnostics, Location location)
         {
+            return CheckFeatureAvailability(tree, feature, diagnostics.DiagnosticBag, location);
+        }
+
+        internal static bool CheckFeatureAvailability(SyntaxTree tree, MessageID feature, DiagnosticBag? diagnostics, Location location)
+        {
             if (feature.GetFeatureAvailabilityDiagnosticInfo((CSharpParseOptions)tree.Options) is { } diagInfo)
             {
-                diagnostics.Add(diagInfo, location);
+                diagnostics?.Add(diagInfo, location);
                 return false;
             }
             return true;

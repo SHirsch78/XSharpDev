@@ -155,58 +155,16 @@ namespace Microsoft.CodeAnalysis.CompilerServer
 
         internal async Task<int> RunShutdownAsync(string pipeName, bool waitForProcess, CancellationToken cancellationToken = default)
         {
-            if (WasServerRunning(pipeName) == false)
-            {
-                // The server holds the mutex whenever it is running, if it's not open then the 
-                // server simply isn't running.
-                return CommonCompiler.Succeeded;
-            }
-
-            try
-            {
 #if XSHARP
                 XSharpString.CaseSensitive = pipeName.EndsWith("__CS");
 #endif
-                var realTimeout = timeout != null
-                    ? (int)timeout.Value.TotalMilliseconds
-                    : Timeout.Infinite;
-                using var client = await ConnectForShutdownAsync(pipeName, realTimeout).ConfigureAwait(false);
-                if (client is object)
-                {
-                    var request = BuildRequest.CreateShutdown();
-                    await request.WriteAsync(client, cancellationToken).ConfigureAwait(false);
-                    var response = await BuildResponse.ReadAsync(client, cancellationToken).ConfigureAwait(false);
-                    var shutdownResponse = (ShutdownBuildResponse)response;
-
-                    if (waitForProcess)
-                    {
-                        try
-                        {
-                            var process = Process.GetProcessById(shutdownResponse.ServerProcessId);
-                            process.WaitForExit();
-                        }
-                        catch (Exception)
-                        {
-                            // There is an inherent race here with the server process.  If it has already shutdown
-                            // by the time we try to access it then the operation has succeed.
-                        }
-                    }
-                }
-
-                return CommonCompiler.Succeeded;
-            }
-            catch (Exception)
-            {
-                if (WasServerRunning(pipeName) == false)
-                {
-                    // If the server was in the process of shutting down when we connected then it's reasonable
-                    // for an exception to happen.  If the mutex has shutdown at this point then the server 
-                    // is shut down.
-                    return CommonCompiler.Succeeded;
-                }
-
-                return CommonCompiler.Failed;
-            }
+            var success = await BuildServerConnection.RunServerShutdownRequestAsync(
+                pipeName,
+                timeoutOverride: null,
+                waitForProcess: waitForProcess,
+                _logger,
+                cancellationToken).ConfigureAwait(false);
+            return success ? CommonCompiler.Succeeded : CommonCompiler.Failed;
         }
 
         internal static bool ParseCommandLine(string[] args, out string? pipeName, out bool shutdown)

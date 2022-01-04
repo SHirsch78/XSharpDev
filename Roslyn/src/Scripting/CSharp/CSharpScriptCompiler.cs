@@ -45,7 +45,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Scripting
             diagnostics.Free();
 
 #if !XSHARP
-            var tree = SyntaxFactory.ParseSyntaxTree(script.SourceText, DefaultParseOptions, script.Options.FilePath);
+            var tree = SyntaxFactory.ParseSyntaxTree(script.SourceText, script.Options.ParseOptions ?? DefaultParseOptions, script.Options.FilePath);
 #else
             var tree = SyntaxFactory.ParseSyntaxTree(script.SourceText, DefaultParseOptions.WithXSharpSpecificOptions(script.Options.XsOptions), script.Options.FilePath);
 #endif
@@ -72,9 +72,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Scripting
                     metadataReferenceResolver: script.Options.MetadataResolver,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default
 #if XSHARP
-                ).WithXSharpSpecificOptions(script.Options.XsOptions)
+                ).WithXSharpSpecificOptions(script.Options.XsOptions)),
+#else
+                )),
 #endif
-                ,
                 previousSubmission,
                 script.ReturnType,
                 script.GlobalsType
@@ -82,5 +83,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Scripting
 
             return compilation;
         }
+
+        internal static CSharpCompilationOptions WithTopLevelBinderFlags(CSharpCompilationOptions options)
+            => options.WithTopLevelBinderFlags(BinderFlags.IgnoreCorLibraryDuplicatedTypes);
     }
 }

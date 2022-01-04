@@ -179,7 +179,7 @@ statementBlock      : (Stmts+=statement)*
                     ;
 
 
-funcprocModifiers   : ( Tokens+=(STATIC | INTERNAL | PUBLIC | EXPORT | UNSAFE) )+
+funcprocModifiers   : ( Tokens+=(STATIC | INTERNAL | PUBLIC | EXPORT | UNSAFE | ASYNC ) )+
                     ; // make sure all tokens are also in the IsModifier method inside XSharpLexerCode.cs
 
 
@@ -725,13 +725,13 @@ xbasevar            : (Amp=AMP)?  Id=varidentifierName
 foxdecl             : T=(DIMENSION|DECLARE) DimVars += dimensionVar
                         (COMMA DimVars+=dimensionVar)*    end=eos
                     // This has names, and no ampersand
-                    | T=(MEMVAR|PARAMETERS) Vars+=varidentifierName
-                        (COMMA Vars+=varidentifierName)*  end=eos      
+                    | T=MEMVAR Vars+=varidentifierName
+                        (COMMA Vars+=varidentifierName)*  end=eos // FoxPro does not have MEMVAR but it does not hurt to declare it here
                     // This has names and optional types
-                    | T=LPARAMETERS Vars+=varidentifierName XT=xbasedecltype?
+                    | T=(PARAMETERS|LPARAMETERS) Vars+=varidentifierName XT=xbasedecltype?
                         (COMMA Vars+=varidentifierName XT=xbasedecltype? )* end=eos
                     // This has names and optional ampersands
-                    | T=(PRIVATE|PUBLIC) XVars+=foxbasevar
+                    | T=(PRIVATE|PUBLIC) XVars+=foxbasevar       // FoxBaseVar also allows Ampersands
                         (COMMA XVars+=foxbasevar)*  end=eos      
                     // Variations of LOCAL and PUBLIC with the ARRAY keyword
                     | T=LOCAL Ar=ARRAY DimVars += dimensionVar
@@ -744,15 +744,16 @@ foxdecl             : T=(DIMENSION|DECLARE) DimVars += dimensionVar
 dimensionVar        : (Amp=AMP)?  Id=varidentifierName 
                         ( LBRKT  Dims+=expression (COMMA Dims+=expression)* RBRKT
                         | LPAREN Dims+=expression (COMMA Dims+=expression)* RPAREN )
-                        (XT=xbasedecltype)?
+                        XT=xbasedecltype?  // is ignored in FoxPro too, except when calling COM components
                     ;
 
 xbasedecltype       : AS Type=datatype (OF ClassLib=identifierName)?
-                    ;  // parseed but ignored . FoxPro uses this only for intellisense. We can/should do that to in the editor
+                    ;  // parsed but ignored . FoxPro uses this only for intellisense. We can/should do that to in the editor
                     
 
 // For the variable list for Private and Public
 foxbasevar          : (Amp=AMP)?  Id=varidentifierName
+                      XT=xbasedecltype?  // is ignored in FoxPro too
                     ;
 
 
@@ -935,7 +936,7 @@ argumentList        :  Args+=namedArgument (COMMA Args+=namedArgument)*
                     ;
 
                     // NOTE: Expression is optional so we can skip arguments for VO/Vulcan compatibility
-namedArgument       :  {AllowNamedArgs}?  Name=identifierName Op=assignoperator  ( RefOut=(REF | OUT) )? Expr=expression?
+namedArgument       :  {AllowNamedArgs}?   Name=identifierName Op=assignoperator  ( RefOut=(REF | OUT) )? Expr=expression?
                     |   RefOut=OUT Var=VAR Id=varidentifier
                     |   RefOut=OUT Id=varidentifier AS Type=datatype
                     |   RefOut=OUT Null=NULL
@@ -1086,16 +1087,17 @@ queryContinuation   : I=INTO Id=identifier Body=queryBody
 
 
 // All New Vulcan and X# keywords can also be recognized as Identifier
-identifier          : Token=ID  
-                    | XsToken=keywordxs
-                    | XppToken=keywordxpp
-                    | FoxToken=keywordfox
+identifier          : ID            // No names, we use the Start property to access the token
+                    | keywordxs
+                    | keywordxpp
+                    | keywordfox
                     ;
-
-identifierString    : Token=(ID | STRING_CONST)
-                    | XsToken=keywordxs
-                    | XppToken=keywordxpp
-                    | FoxToken=keywordfox
+                     
+identifierString    : ID            // No names, we use the Start property to access the token
+                    | STRING_CONST 
+                    | keywordxs
+                    | keywordxpp
+                    | keywordfox
                     ;
 
 
@@ -1198,7 +1200,7 @@ keywordxs           : Token=(AUTO | CHAR | CONST |  DEFAULT | GET | IMPLEMENTS |
                     | STEP | STRICT | TO | THISCALL |  UPTO | USING | WINCALL 
                     // The following keywords are handled in the fixPositionalKeyword() method of the lexer and will only be keywords at the right place
                     // but when they code event->(DoSomething()) we still need them in this rule...
-                    | DEFINE | TRY | SWITCH | EVENT| EXPLICIT | FOREACH | UNTIL | PARAMETERS | YIELD | MEMVAR | NOP 
+                    | DEFINE | TRY | SWITCH | EVENT| EXPLICIT | FIELD | FOREACH | UNTIL | PARAMETERS | YIELD | MEMVAR | NOP 
                     | PARTIAL | SEALED | ABSTRACT | UNSAFE | SCOPE | NAMESPACE | LOCK | IMPLICIT | IMPLIED | INITONLY | PROPERTY | INTERFACE
                     | VOSTRUCT | UNION | DECLARE | OPERATOR	
                     )

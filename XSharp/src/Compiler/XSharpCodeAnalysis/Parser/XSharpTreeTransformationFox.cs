@@ -120,7 +120,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 context.foxFlags |= XP.FoxFlags.MPrefix;
                 context.Put(context.Name.Get<ExpressionSyntax>());
-                var ent = CurrentEntity;
+                var ent = CurrentMember;
                 if (ent != null && _options.HasOption(CompilerOption.MemVars, context, PragmaOptions))
                 {
                     ent.Data.HasMemVars = true;
@@ -183,7 +183,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             // use the Enter call to declare the memory variables
             // The locals are generated in the ExitFoxdecl()
             context.SetSequencePoint(context.end);
-            if (CurrentEntity == null)
+            if (CurrentMember == null)
             {
                 return;
             }
@@ -192,7 +192,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 var prefix = XSharpSpecialNames.ClipperParamPrefix;
                 if (context.T.Type != XP.LPARAMETERS)
                 {
-                    CurrentEntity.Data.HasMemVars = true;
+                    CurrentMember.Data.HasMemVars = true;
                     prefix = "M";
                 }
                 // List inside _Vars. 
@@ -204,7 +204,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             else if (context.T.Type == XP.PUBLIC || context.T.Type == XP.PRIVATE)
             {
-                CurrentEntity.Data.HasMemVars = true;
+                CurrentMember.Data.HasMemVars = true;
                 // List inside _XVars. 
                 foreach (var memvar in context._XVars)
                 {
@@ -215,18 +215,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (context.T.Type == XP.PARAMETERS || context.T.Type == XP.LPARAMETERS)
             {
                 // Function must be clipper calling convention.
-                CurrentEntity.Data.HasClipperCallingConvention = true;
-                if (CurrentEntity.Data.HasParametersStmt || CurrentEntity.Data.HasLParametersStmt || CurrentEntity.Data.HasFormalParameters)
+                var member = CurrentMember;
+                member.Data.HasClipperCallingConvention = true;
+                if (member.Data.HasParametersStmt || member.Data.HasLParametersStmt || member.Data.HasFormalParameters)
                 {
                     // trigger error message by setting both
                     // that way 2 x PARAMETERS or 2x LPARAMETERS will also trigger an error
-                    CurrentEntity.Data.HasParametersStmt = true;
-                    CurrentEntity.Data.HasLParametersStmt = true;
+                    member.Data.HasParametersStmt = true;
+                    member.Data.HasLParametersStmt = true;
                 }
                 else
                 {
-                    CurrentEntity.Data.HasParametersStmt = (context.T.Type == XP.PARAMETERS);
-                    CurrentEntity.Data.HasLParametersStmt = (context.T.Type == XP.LPARAMETERS);
+                    member.Data.HasParametersStmt = (context.T.Type == XP.PARAMETERS);
+                    member.Data.HasLParametersStmt = (context.T.Type == XP.LPARAMETERS);
                 }
             }
         }
@@ -438,7 +439,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 name = ins.Identifier.Text.ToUpper();
                 if (name == XSharpIntrinsicNames.DoDefault)
                 {
-                    var entity = CurrentEntity;
+                    var entity = CurrentMember;
                     name = entity.ShortName;
                     var super = GenerateSuper();
                     var member = MakeSimpleMemberAccess(super, GenerateSimpleName(name));
@@ -578,13 +579,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 context.RealType = XP.METHOD;
             }
+            CheckVirtualOverride(context, context.Modifiers?._Tokens);
         }
- 
+
         public override void ExitFoxmethod([NotNull] XP.FoxmethodContext context)
         {
             context.SetSequencePoint(context.T.Token, context.end.Stop);
             var idName = context.Id.Get<SyntaxToken>();
-            var mods = context.Modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(context, false, false, context.TypeParameters != null);
+            var mods = context.Modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(context, context.TypeParameters != null);
             var isExtern = mods.Any((int)SyntaxKind.ExternKeyword);
             var isAbstract = mods.Any((int)SyntaxKind.AbstractKeyword);
             var isStatic = mods.Any((int)SyntaxKind.StaticKeyword);
@@ -613,8 +615,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 mods = vomods.ToList<SyntaxToken>();
                 _pool.Free(vomods);
             }
-            
-            if (!isExtern)
+           if (!isExtern)
             {
                 isExtern = hasDllImport(attributes);
                 hasNoBody = hasNoBody || isExtern;
@@ -632,7 +633,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var parameters = getParameters(context.ParamList);
             var body = hasNoBody ? null : processEntityBody(context);
             var expressionBody = GetExpressionBody(context.Sig.ExpressionBody);
-            var returntype = context.Type?.Get<TypeSyntax>();
+            var returntype = context.ReturnType?.Get<TypeSyntax>();
             if (returntype == null)
             {
                 if (context.RealType == XP.ASSIGN)
@@ -838,7 +839,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 m = (MemberDeclarationSyntax)CheckForConflictBetweenTypeNameAndNamespaceName(context, "CLASS", m);
             }
-            
+
             context.Put(m);
             if (context.Data.Partial)
             {
@@ -850,7 +851,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             var list = MakeSeparatedList(GenerateVariable(fldName, null));
             var decl = _syntaxFactory.VariableDeclaration(type, list);
-            var mods = modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(modifiers, false, false, true);
+            var mods = modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(modifiers, false);
             var fdecl = _syntaxFactory.FieldDeclaration(
                                     attributeLists: default,
                                     modifiers: mods,
@@ -897,7 +898,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var accessorList = _syntaxFactory.AccessorList(SyntaxFactory.MakeToken(SyntaxKind.OpenBraceToken),
                         accessors, SyntaxFactory.MakeToken(SyntaxKind.CloseBraceToken));
             _pool.Free(accessors);
-            var mods = modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(context, false, false, false);
+            var mods = modifiers?.GetList<SyntaxToken>() ?? DefaultMethodModifiers(context, false);
             var prop = _syntaxFactory.PropertyDeclaration(
                    attributeLists: default,
                    modifiers: mods,
@@ -1198,7 +1199,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             if (context._Params?.Count > 0)
             {
-                CurrentEntity.Data.HasFormalParameters = true;
+                CurrentMember.Data.HasFormalParameters = true;
             }
         }
 
@@ -1401,9 +1402,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 // Make sure we have a privates level in case we want to
                 // keep track of locals for the macro compiler or Type() 
-                if (CurrentEntity != null)
+                if (CurrentMember != null)
                 {
-                    CurrentEntity.Data.HasMemVars = true;
+                    CurrentMember.Data.HasMemVars = true;
                 }
             }
         }

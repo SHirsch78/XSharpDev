@@ -112,6 +112,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             return false;
         }
+        internal static bool EndsWithUsualParams(this Symbol method)
+        {
+            if (method is MethodSymbol ms)
+            {
+                if (ms.IsParams())
+                {
+                    var parType = ms.Parameters[ms.ParameterCount - 1].Type;
+                    return parType is ArrayTypeSymbol at && at.ElementType.IsUsualType();
+                }
+            }
+            return false;
+        }
     }
 
 }

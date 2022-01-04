@@ -9,14 +9,13 @@ using InternalSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax;
 
 using Microsoft.CodeAnalysis.CSharp;
 using System.Linq;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 using System;
 using Antlr4.Runtime.Tree;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Microsoft.CodeAnalysis;
 using System.Diagnostics;
-using Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax;
 #if !VSPARSER
 using MCT = Microsoft.CodeAnalysis.Text;
 using CoreInternalSyntax = Microsoft.CodeAnalysis.Syntax.InternalSyntax;
@@ -166,25 +165,41 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public PragmaBase Pragma;
         }
 
-#if !VSPARSER
+
         #region Interfaces
-        public interface IPartialPropertyContext : IEntityContext
+        public interface IPartialPropertyContext : ITypeContext
         {
+#if !VSPARSER
             List<IMethodContext> PartialProperties { get; set; }
+#endif
         }
 
-        public interface IGlobalEntityContext : IEntityContext
+        public interface IGlobalEntityContext : IMemberContext
         {
             FuncprocModifiersContext FuncProcModifiers { get; }
         }
-        public interface ILoopStmtContext
+        public interface ILoopStmtContext : IBlockStmtContext
+        {
+        }
+        public interface IBlockStmtContext
         {
             StatementBlockContext Statements { get; }
         }
 
-        public interface IEntityWithBodyContext : IEntityContext
+        public interface IFinallyBlockStmtContext : IBlockStmtContext
         {
-            StatementBlockContext Statements { get; }
+            StatementBlockContext FinallyBlockStatements { get; }
+        }
+
+
+        public interface ITypeParametersContext
+        {
+            public TypeparametersContext TypeParameters { get; }
+            public IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses { get; }
+
+        }
+        public interface IMemberWithBodyContext : IMemberContext, IBlockStmtContext
+        {
         }
 
         internal interface IBodyWithLocalFunctions
@@ -198,61 +213,116 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             IList<EntityContext> Entities { get; }
         }
 
+        public interface ITypeContext : IEntityContext
+        {
+#if !VSPARSER
+         TypeData Data { get; }
+#endif
+        }
+        public interface IMemberContext : IEntityContext
+        {
+#if !VSPARSER
+            MemberData Data { get; }
+#endif
+            DatatypeContext ReturnType { get; }
+            ParameterListContext Params { get; }
+
+        }
         public interface IEntityContext : IRuleNode, IXParseTree
         {
-            EntityData Data { get; }
-            ParameterListContext Params { get; }
-            DatatypeContext ReturnType { get; }
             string Name { get; }
             string ShortName { get; }
         }
-        internal interface IXPPEntityContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        internal interface IXPPMemberContext : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
             XppmemberModifiersContext Mods { get; }
             AttributesContext Atts { get; }
+#if !VSPARSER
             InternalSyntax.XppDeclaredMethodInfo Info { get; }
+#endif
             ParameterListContext Parameters { get; }
-            new StatementBlockContext Statements { get; set; }
+            void SetStatements(StatementBlockContext stmts);
             ExpressionContext ExprBody { get; }
         }
-        #endregion
-        #region Flags
-        [FlagsAttribute]
-        enum EntityFlags : int
+#endregion
+#region Flags
+        [Flags]
+        enum TypeFlags : int
         {
             None = 0,
-            ClipperCallingConvention = 1 << 0, // Member property
-            MissingReturnType = 1 << 1, // Member property
-            UsesPSZ = 1 << 2,           // Member property
-            MustBeUnsafe = 1 << 3,      // Member property
-            HasTypedParameter = 1 << 4, // Member property
-            HasLParametersStmt = 1 << 5, // Member property
-            HasParametersStmt = 1 << 6, // Member property
-            MustBeVoid = 1 << 7,        // Member property
-            IsInitAxit = 1 << 8,        // Member property
-            HasInstanceCtor = 1 << 9,   // Class property
-            Partial = 1 << 10,          // Class property
-            HasStatic = 1 << 10,        // XPP Class property
-            PartialProps = 1 << 11,     // Class property
-            HasDimVar = 1 << 12,        // Member property
-            HasSync = 1 << 13,          // Member property
-            HasAddressOf = 1 << 14,     // Member property
-            IsInitProcedure = 1 << 15,  // Member property
-            HasMemVars = 1 << 16,       // Member property
-            HasYield = 1 << 17,         // Member property
-            HasFormalParameters = 1 << 18,  // Member property
-            HasInit = 1 << 19,          // class property
-            IsEntryPoint = 1 << 20,     // member property
-            HasUndeclared = 1 << 21,    // member property
-            HasMemVarLevel = 1 << 22,   // member property
-            UsesPCount = 1 << 23,       // member property
-            ParameterAssign = 1 << 24, // member property
+            HasInstanceCtor = 1 << 1,
+            Partial = 1 << 2,
+            HasStatic = 1 << 3,        // XPP Class property
+            PartialProps = 1 << 4,
+            HasInit = 1 << 5,
+        }
+        [Flags]
+        enum MemberFlags : int
+        {
+            None = 0,
+            ClipperCallingConvention = 1 << 0,
+            MissingReturnType = 1 << 1,
+            UsesPSZ = 1 << 2,
+            MustBeUnsafe = 1 << 3,
+            HasTypedParameter = 1 << 4,
+            HasLParametersStmt = 1 << 5,
+            HasParametersStmt = 1 << 6,
+            MustBeVoid = 1 << 7,
+            IsInitAxit = 1 << 8,
+            HasDimVar = 1 << 9,
+            HasSync = 1 << 10,
+            HasAddressOf = 1 << 11,
+            IsInitProcedure = 1 << 12,
+            HasMemVars = 1 << 13,
+            HasYield = 1 << 14,
+            HasFormalParameters = 1 << 15,
+            IsEntryPoint = 1 << 16,
+            HasUndeclared = 1 << 17,
+            HasMemVarLevel = 1 << 18,
+            UsesPCount = 1 << 19,
+            ParameterAssign = 1 << 20,
+            HasExplicitVirtual = 1 << 21,
+            HasExplicitOverride = 1 << 22,
         }
         #endregion
 
-        public class EntityData
+#if !VSPARSER
+        public class TypeData
         {
-            EntityFlags setFlag(EntityFlags oldFlag, EntityFlags newFlag, bool set)
+            TypeFlags setFlag(TypeFlags oldFlag, TypeFlags newFlag, bool set)
+            {
+                if (set)
+                    oldFlag |= newFlag;
+                else
+                    oldFlag &= ~newFlag;
+                return oldFlag;
+            }
+            TypeFlags flags;
+            public bool HasInstanceCtor
+            {
+                get { return flags.HasFlag(TypeFlags.HasInstanceCtor); }
+                set { flags = setFlag(flags, TypeFlags.HasInstanceCtor, value); }
+            }
+            public bool Partial
+            {
+                get { return flags.HasFlag(TypeFlags.Partial); }
+                set { flags = setFlag(flags, TypeFlags.Partial, value); }
+            }
+            public bool PartialProps
+            {
+                get { return flags.HasFlag(TypeFlags.PartialProps); }
+                set { flags = setFlag(flags, TypeFlags.PartialProps, value); }
+            }
+            public bool HasStatic
+            {
+                get { return flags.HasFlag(TypeFlags.HasStatic); }
+                set { flags = setFlag(flags, TypeFlags.HasStatic, value); }
+            }
+        }
+
+        public class MemberData
+        {
+            MemberFlags setFlag(MemberFlags oldFlag, MemberFlags newFlag, bool set)
             {
                 if (set)
                     oldFlag |= newFlag;
@@ -261,146 +331,126 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 return oldFlag;
             }
 
-            EntityFlags flags;
+            MemberFlags flags;
 
             public bool HasClipperCallingConvention
             {
-                get { return flags.HasFlag(EntityFlags.ClipperCallingConvention); }
-                set { flags = setFlag(flags, EntityFlags.ClipperCallingConvention, value); }
+                get { return flags.HasFlag(MemberFlags.ClipperCallingConvention); }
+                set { flags = setFlag(flags, MemberFlags.ClipperCallingConvention, value); }
             }
-
             public bool HasParametersStmt
             {
-                get { return flags.HasFlag(EntityFlags.HasParametersStmt); }
-                set { flags = setFlag(flags, EntityFlags.HasParametersStmt, value); }
+                get { return flags.HasFlag(MemberFlags.HasParametersStmt); }
+                set { flags = setFlag(flags, MemberFlags.HasParametersStmt, value); }
             }
             public bool HasLParametersStmt
             {
-                get { return flags.HasFlag(EntityFlags.HasLParametersStmt); }
-                set { flags = setFlag(flags, EntityFlags.HasLParametersStmt, value); }
+                get { return flags.HasFlag(MemberFlags.HasLParametersStmt); }
+                set { flags = setFlag(flags, MemberFlags.HasLParametersStmt, value); }
             }
             public bool HasFormalParameters
             {
-                get { return flags.HasFlag(EntityFlags.HasFormalParameters); }
-                set { flags = setFlag(flags, EntityFlags.HasFormalParameters, value); }
+                get { return flags.HasFlag(MemberFlags.HasFormalParameters); }
+                set { flags = setFlag(flags, MemberFlags.HasFormalParameters, value); }
             }
             public bool HasMissingReturnType
             {
-                get { return flags.HasFlag(EntityFlags.MissingReturnType); }
-                set { flags = setFlag(flags, EntityFlags.MissingReturnType, value); }
+                get { return flags.HasFlag(MemberFlags.MissingReturnType); }
+                set { flags = setFlag(flags, MemberFlags.MissingReturnType, value); }
             }
             public bool HasTypedParameter
             {
-                get { return flags.HasFlag(EntityFlags.HasTypedParameter); }
-                set { flags = setFlag(flags, EntityFlags.HasTypedParameter, value); }
+                get { return flags.HasFlag(MemberFlags.HasTypedParameter); }
+                set { flags = setFlag(flags, MemberFlags.HasTypedParameter, value); }
             }
             public bool UsesPSZ
             {
-                get { return flags.HasFlag(EntityFlags.UsesPSZ); }
-                set { flags = setFlag(flags, EntityFlags.UsesPSZ, value); }
+                get { return flags.HasFlag(MemberFlags.UsesPSZ); }
+                set { flags = setFlag(flags, MemberFlags.UsesPSZ, value); }
             }
             public bool MustBeUnsafe
             {
-                get { return flags.HasFlag(EntityFlags.MustBeUnsafe); }
-                set { flags = setFlag(flags, EntityFlags.MustBeUnsafe, value); }
+                get { return flags.HasFlag(MemberFlags.MustBeUnsafe); }
+                set { flags = setFlag(flags, MemberFlags.MustBeUnsafe, value); }
             }
 
             public bool MustBeVoid            // Assign, SET, Event Accessor
             {
-                get { return flags.HasFlag(EntityFlags.MustBeVoid); }
-                set { flags = setFlag(flags, EntityFlags.MustBeVoid, value); }
+                get { return flags.HasFlag(MemberFlags.MustBeVoid); }
+                set { flags = setFlag(flags, MemberFlags.MustBeVoid, value); }
             }
             public bool IsInitAxit            // init or axit with /vo1
             {
-                get { return flags.HasFlag(EntityFlags.IsInitAxit); }
-                set { flags = setFlag(flags, EntityFlags.IsInitAxit, value); }
+                get { return flags.HasFlag(MemberFlags.IsInitAxit); }
+                set { flags = setFlag(flags, MemberFlags.IsInitAxit, value); }
             }
 
-            public bool HasInstanceCtor
-            {
-                get { return flags.HasFlag(EntityFlags.HasInstanceCtor); }
-                set { flags = setFlag(flags, EntityFlags.HasInstanceCtor, value); }
-            }
-            public bool Partial
-            {
-                get { return flags.HasFlag(EntityFlags.Partial); }
-                set { flags = setFlag(flags, EntityFlags.Partial, value); }
-            }
-            public bool PartialProps
-            {
-                get { return flags.HasFlag(EntityFlags.PartialProps); }
-                set { flags = setFlag(flags, EntityFlags.PartialProps, value); }
-            }
             public bool HasDimVar
             {
-                get { return flags.HasFlag(EntityFlags.HasDimVar); }
-                set { flags = setFlag(flags, EntityFlags.HasDimVar, value); }
+                get { return flags.HasFlag(MemberFlags.HasDimVar); }
+                set { flags = setFlag(flags, MemberFlags.HasDimVar, value); }
             }
             public bool HasSync
             {
-                get { return flags.HasFlag(EntityFlags.HasSync); }
-                set { flags = setFlag(flags, EntityFlags.HasSync, value); }
+                get { return flags.HasFlag(MemberFlags.HasSync); }
+                set { flags = setFlag(flags, MemberFlags.HasSync, value); }
             }
             public bool HasAddressOf
             {
-                get { return flags.HasFlag(EntityFlags.HasAddressOf); }
-                set { flags = setFlag(flags, EntityFlags.HasAddressOf, value); }
-            }
-            public bool HasStatic
-            {
-                get { return flags.HasFlag(EntityFlags.HasStatic); }
-                set { flags = setFlag(flags, EntityFlags.HasStatic, value); }
+                get { return flags.HasFlag(MemberFlags.HasAddressOf); }
+                set { flags = setFlag(flags, MemberFlags.HasAddressOf, value); }
             }
             public bool HasMemVars
             {
-                get { return flags.HasFlag(EntityFlags.HasMemVars); }
-                set { flags = setFlag(flags, EntityFlags.HasMemVars, value); }
+                get { return flags.HasFlag(MemberFlags.HasMemVars); }
+                set { flags = setFlag(flags, MemberFlags.HasMemVars, value); }
             }
-
             public bool HasUndeclared
             {
-                get { return flags.HasFlag(EntityFlags.HasUndeclared); }
-                set { flags = setFlag(flags, EntityFlags.HasUndeclared, value); }
+                get { return flags.HasFlag(MemberFlags.HasUndeclared); }
+                set { flags = setFlag(flags, MemberFlags.HasUndeclared, value); }
             }
-
             public bool HasMemVarLevel
             {
-                get { return flags.HasFlag(EntityFlags.HasMemVarLevel); }
-                set { flags = setFlag(flags, EntityFlags.HasMemVarLevel, value); }
+                get { return flags.HasFlag(MemberFlags.HasMemVarLevel); }
+                set { flags = setFlag(flags, MemberFlags.HasMemVarLevel, value); }
             }
             public bool UsesPCount
             {
-                get { return flags.HasFlag(EntityFlags.UsesPCount); }
-                set { flags = setFlag(flags, EntityFlags.UsesPCount, value); }
+                get { return flags.HasFlag(MemberFlags.UsesPCount); }
+                set { flags = setFlag(flags, MemberFlags.UsesPCount, value); }
             }
             public bool HasYield
             {
-                get { return flags.HasFlag(EntityFlags.HasYield); }
-                set { flags = setFlag(flags, EntityFlags.HasYield, value); }
+                get { return flags.HasFlag(MemberFlags.HasYield); }
+                set { flags = setFlag(flags, MemberFlags.HasYield, value); }
             }
-
             public bool IsInitProcedure
             {
-                get { return flags.HasFlag(EntityFlags.IsInitProcedure); }
-                set { flags = setFlag(flags, EntityFlags.IsInitProcedure, value); }
-            }
-            public bool HasInit
-            {
-                get { return flags.HasFlag(EntityFlags.HasInit); }
-                set { flags = setFlag(flags, EntityFlags.HasInit, value); }
+                get { return flags.HasFlag(MemberFlags.IsInitProcedure); }
+                set { flags = setFlag(flags, MemberFlags.IsInitProcedure, value); }
             }
             public bool IsEntryPoint
             {
-                get { return flags.HasFlag(EntityFlags.IsEntryPoint); }
-                set { flags = setFlag(flags, EntityFlags.IsEntryPoint, value); }
+                get { return flags.HasFlag(MemberFlags.IsEntryPoint); }
+                set { flags = setFlag(flags, MemberFlags.IsEntryPoint, value); }
             }
 
             public bool ParameterAssign
             {
-                get { return flags.HasFlag(EntityFlags.ParameterAssign); }
-                set { flags = setFlag(flags, EntityFlags.ParameterAssign, value); }
+                get { return flags.HasFlag(MemberFlags.ParameterAssign); }
+                set { flags = setFlag(flags, MemberFlags.ParameterAssign, value); }
             }
-
+            public bool HasExplicitOverride
+            {
+                get { return flags.HasFlag(MemberFlags.HasExplicitOverride); }
+                set { flags = setFlag(flags, MemberFlags.HasExplicitOverride, value); }
+            }
+            public bool HasExplicitVirtual
+            {
+                get { return flags.HasFlag(MemberFlags.HasExplicitVirtual); }
+                set { flags = setFlag(flags, MemberFlags.HasExplicitVirtual, value); }
+            }
             internal Dictionary<string, MemVarFieldInfo> Fields = null;
             internal MemVarFieldInfo AddField(string Name, string Alias, XSharpParserRuleContext context)
             {
@@ -425,16 +475,13 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 }
                 return null;
             }
+        
         }
-
+#endif
         public partial class ScriptContext : IEntityContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => null;
-            public String ShortName => null;
+            public string Name => null;
+            public string ShortName => null;
         }
 
         public partial class MethodCallContext
@@ -463,6 +510,50 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public IList<PragmaOption> PragmaOptions { get; set; }
             public IList<EntityContext> Entities => _Entities;
         }
+
+        public partial class BlockStmtContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+        public partial class WithBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+        public partial class CaseBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+        public partial class IfElseBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+
+        public partial class SeqStmtContext : IFinallyBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+            public StatementBlockContext FinallyBlockStatements { get { return FinBlock; } }
+
+        }
+        public partial class TryStmtContext : IFinallyBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+            public StatementBlockContext FinallyBlockStatements { get { return FinBlock; } }
+        }
+
+        public partial class CatchBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+        public partial class RecoverBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlock; } }
+        }
+
+        public partial class SwitchBlockContext : IBlockStmtContext
+        {
+            public StatementBlockContext Statements { get { return StmtBlk; } }
+        }
+
         public partial class RepeatStmtContext : ILoopStmtContext
         {
             public StatementBlockContext Statements { get { return StmtBlk; } }
@@ -480,78 +571,79 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public StatementBlockContext Statements { get { return StmtBlk; } }
         }
 
-        public partial class LocalfuncprocContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class LocalfuncprocContext : IMemberWithBodyContext, IBodyWithLocalFunctions, ITypeParametersContext
         {
 
             public IdentifierContext Id => this.Sig.Id;
             public TypeparametersContext TypeParameters => Sig.TypeParameters;
             public IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses => Sig._ConstraintsClauses;
             public ParameterListContext ParamList => Sig.ParamList;
-            public DatatypeContext Type => Sig.Type;
             public CallingconventionContext CallingConvention => Sig.CallingConvention;
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
-            public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName => this.Id.GetText();
+            public DatatypeContext ReturnType => Sig.Type;
+            public string Name => ParentName + ShortName;
+            public string ShortName => this.Id.GetText();
             public LocalfuncprocModifiersContext LocalFuncProcModifiers => Modifiers;
             public StatementBlockContext Statements => StmtBlk;
             public IList<object> LocalFunctions { get; set; } = null;
         }
 
-        public partial class FuncprocContext : IEntityWithBodyContext, IGlobalEntityContext, IBodyWithLocalFunctions
+        public partial class FuncprocContext : IMemberWithBodyContext, IGlobalEntityContext, IBodyWithLocalFunctions, ITypeParametersContext
         {
 
             public IdentifierContext Id => this.Sig.Id;
             public TypeparametersContext TypeParameters => Sig.TypeParameters;
             public IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses => Sig._ConstraintsClauses;
             public ParameterListContext ParamList => Sig.ParamList;
-            public DatatypeContext Type => Sig.Type;
             public CallingconventionContext CallingConvention => Sig.CallingConvention;
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
-            public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName => this.Id.GetText();
+            public DatatypeContext ReturnType => Sig.Type;
+            public string Name => ParentName + ShortName;
+            public string ShortName => this.Id.GetText();
             public FuncprocModifiersContext FuncProcModifiers => Modifiers;
             public StatementBlockContext Statements => StmtBlk;
             public int RealType { get; set; } // fox FoxPro Function and Procedure will be come method, access or assign
             public IList<object> LocalFunctions { get; set; } = null;
         }
 
-        public interface IMethodContext : IEntityWithBodyContext
+        public interface IMethodContext : IMemberWithBodyContext, ITypeParametersContext
         {
             IdentifierContext Id { get; }
-            TypeparametersContext TypeParameters { get; }
-            IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses { get; }
             ParameterListContext ParamList { get; }
-            DatatypeContext Type { get; }
             MemberModifiersContext Mods { get; }
             ExpressionContext ExpressionBody { get; }
             bool IsInInterface { get; }
             bool IsInStructure { get; }
             int RealType { get; }
         }
-        public partial class MethodContext : IMethodContext, IBodyWithLocalFunctions
+        public partial class MethodContext : IMethodContext, IBodyWithLocalFunctions, ITypeParametersContext
         {
             public IdentifierContext Id => Sig.Id;
             public TypeparametersContext TypeParameters => Sig.TypeParameters;
             public IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses => Sig._ConstraintsClauses;
             public ParameterListContext ParamList => Sig.ParamList;
-            public DatatypeContext Type => Sig.Type;
+            public DatatypeContext ReturnType => Sig.Type;
             public CallingconventionContext CallingConvention => Sig.CallingConvention;
             public bool IsInInterface => this.isInInterface();
             public bool IsInStructure => this.isInStructure();
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
-            public DatatypeContext ReturnType => this.Type;
             public MemberModifiersContext Mods => this.Modifiers;
-            public String ShortName => this.Id.GetText();
+            public string ShortName => this.Id.GetText();
             public ExpressionContext ExpressionBody => Sig.ExpressionBody;
-            public String Name
+            public string Name
             {
                 get
                 {
@@ -571,25 +663,26 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
 
         }
 
-        public partial class FoxmethodContext : IMethodContext, IBodyWithLocalFunctions
+        public partial class FoxmethodContext : IMethodContext, IBodyWithLocalFunctions, ITypeParametersContext
         {
             public IdentifierContext Id => Sig.Id;
             public TypeparametersContext TypeParameters => Sig.TypeParameters;
             public IList<TypeparameterconstraintsclauseContext> _ConstraintsClauses => Sig._ConstraintsClauses;
             public ParameterListContext ParamList => Sig.ParamList;
-            public DatatypeContext Type => Sig.Type;
+            public DatatypeContext ReturnType => Sig.Type;
             public CallingconventionContext CallingConvention => Sig.CallingConvention;
             public MemberModifiersContext Mods => this.Modifiers;
             public bool IsInInterface => false;
             public bool IsInStructure => false;
 
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.Sig.ParamList;
-            public DatatypeContext ReturnType => this.Sig.Type;
-            public String ShortName => this.Sig.Id.GetText();
+            public string ShortName => this.Sig.Id.GetText();
             public ExpressionContext ExpressionBody => Sig.ExpressionBody;
-            public String Name
+            public string Name
             {
                 get
                 {
@@ -603,90 +696,105 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public IList<object> LocalFunctions { get; set; } = null;
         }
 
-        public partial class EventAccessorContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class EventAccessorContext : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + Key.Text;
-            public String ShortName => ParentName + Key.Text;
+            public string Name => ParentName + Key.Text;
+            public string ShortName => ParentName + Key.Text;
             public StatementBlockContext Statements => StmtBlk;
             public bool HasReturnValue => false;
             public IList<object> LocalFunctions { get; set; } = null;
         }
 
-        public partial class PropertyAccessorContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class PropertyAccessorContext : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + Key.Text;
-            public String ShortName => ParentName + Key.Text;
+            public string Name => ParentName + Key.Text;
+            public string ShortName => ParentName + Key.Text;
             public StatementBlockContext Statements => StmtBlk;
             public IList<object> LocalFunctions { get; set; } = null;
         }
-        public partial class PropertyLineAccessorContext : IEntityContext
+        public partial class PropertyLineAccessorContext : IMemberContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + Key.Text;
-            public String ShortName => ParentName + Key.Text;
+            public string Name => ParentName + Key.Text;
+            public string ShortName => ParentName + Key.Text;
         }
-        public partial class ConstructorContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class ConstructorContext : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => "ctor";
+            public string Name => ParentName + ShortName;
+            public string ShortName => "ctor";
             public StatementBlockContext Statements => StmtBlk;
             public IList<object> LocalFunctions { get; set; } = null;
         }
-        public partial class DestructorContext : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class DestructorContext : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => "Finalize";
+            public string Name => ParentName + ShortName;
+            public string ShortName => "Finalize";
             public StatementBlockContext Statements => StmtBlk;
             public IList<object> LocalFunctions { get; set; } = null;
         }
-        public partial class Event_Context : IEntityContext
+        public partial class Event_Context : IMemberContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
             public IList<object> LocalFunctions { get; set; } = null;
         }
-        public partial class VodefineContext : IEntityContext, IGlobalEntityContext
+        public partial class VodefineContext : IMemberContext, IGlobalEntityContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
             public FuncprocModifiersContext FuncProcModifiers => Modifiers;
         }
-        public partial class PropertyContext : IEntityContext
+        public partial class PropertyContext : IMemberContext
         {
-            readonly EntityData data = new();
-
-            public EntityData Data { get { return data; } }
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName
+            public string Name => ParentName + ShortName;
+            public string ShortName
             {
                 get
                 {
@@ -694,14 +802,16 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 }
             }
         }
-        public partial class Operator_Context : IEntityWithBodyContext, IBodyWithLocalFunctions
+        public partial class Operator_Context : IMemberWithBodyContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName
+            public string Name => ParentName + ShortName;
+            public string ShortName
             {
                 get
                 {
@@ -716,90 +826,98 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public StatementBlockContext Statements => StmtBlk;
             public IList<object> LocalFunctions { get; set; } = null;
         }
-        public partial class Delegate_Context : IEntityContext
+        public partial class Delegate_Context : ITypeContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => ParentName + ShortName;
-            public String ShortName => this.Id.GetText();
+            public string Name => ParentName + ShortName;
+            public string ShortName => this.Id.GetText();
         }
-        public partial class Interface_Context : IPartialPropertyContext, IEntityContext
+        public partial class Interface_Context : IPartialPropertyContext, ITypeContext
         {
-            readonly EntityData data = new();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
             List<IMethodContext> partialProperties = null;
             public List<IMethodContext> PartialProperties
             {
                 get { return partialProperties; }
                 set { partialProperties = value; }
             }
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => this.Id.GetText();
+#endif
+            public string Name => ParentName + ShortName;
+            public string ShortName => this.Id.GetText();
 
         }
-        public partial class Class_Context : IPartialPropertyContext, IEntityContext
+        public partial class Class_Context : IPartialPropertyContext, ITypeContext
         {
-            readonly EntityData data = new();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
             List<IMethodContext> partialProperties = null;
             public List<IMethodContext> PartialProperties
             {
                 get { return partialProperties; }
                 set { partialProperties = value; }
             }
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+#endif
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
         }
-        public partial class Structure_Context : IPartialPropertyContext, IEntityContext
+        public partial class Structure_Context : IPartialPropertyContext, ITypeContext
         {
-            readonly EntityData data = new();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
             List<IMethodContext> partialProperties = null;
             public List<IMethodContext> PartialProperties
             {
                 get { return partialProperties; }
                 set { partialProperties = value; }
             }
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+#endif
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
         }
-        public partial class VodllContext : IEntityContext, IGlobalEntityContext
+        public partial class VodllContext : IMemberContext, IGlobalEntityContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => this.Id.GetText();
-            public String ShortName => this.Id.GetText();
+            public string Name => this.Id.GetText();
+            public string ShortName => this.Id.GetText();
             public FuncprocModifiersContext FuncProcModifiers => Modifiers;
         }
 
-        public partial class VoglobalContext : IEntityContext, IGlobalEntityContext
+        public partial class VoglobalContext : IMemberContext, IGlobalEntityContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => this._Vars.First().DataType;
-            public String Name => this._Vars.First().Id.GetText();
-            public String ShortName => this._Vars.First().Id.GetText();
+            public string Name => this._Vars.First().Id.GetText();
+            public string ShortName => this._Vars.First().Id.GetText();
             public FuncprocModifiersContext FuncProcModifiers => Modifiers;
         }
-        public partial class FoxdllContext : IEntityContext, IGlobalEntityContext
+        public partial class FoxdllContext : IMemberContext, IGlobalEntityContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => this.Type;
-            public String Name => this.Id.GetText();
-            public String ShortName => this.Id.GetText();
+            public string Name => this.Id.GetText();
+            public string ShortName => this.Id.GetText();
             public FuncprocModifiersContext FuncProcModifiers => Modifiers;
         }
 
@@ -808,48 +926,50 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             public bool IsStaticVisible { get; set; }
         }
 
-        public partial class VounionContext : IEntityContext
+        public partial class VounionContext : ITypeContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => this.Id.GetText();
-            public String ShortName => this.Id.GetText();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
+#endif
+            public string Name => this.Id.GetText();
+            public string ShortName => this.Id.GetText();
 
         }
-        public partial class VostructContext : IEntityContext
+        public partial class VostructContext : ITypeContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => this.Id.GetText();
-            public String ShortName => this.Id.GetText();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
+#endif
+            public string Name => this.Id.GetText();
+            public string ShortName => this.Id.GetText();
 
         }
-        public partial class XppclassContext : IEntityContext
+        public partial class XppclassContext : ITypeContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
+#endif
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
         }
         public partial class XppclassvarsContext
         {
             public int Visibility { get; set; }
         }
 
-        public partial class XppmethodContext : IXPPEntityContext
+        public partial class XppmethodContext : IXPPMemberContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => this.Type;
-            public String ShortName => this.Id.GetText();
-            public String Name
+            public string ShortName => this.Id.GetText();
+            public string Name
             {
                 get
                 {
@@ -857,22 +977,27 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                     return ParentName + name;
                 }
             }
-            public InternalSyntax.XppDeclaredMethodInfo Info { get; set; }
+#if !VSPARSER
+    public InternalSyntax.XppDeclaredMethodInfo Info { get; set; }
+#endif
             public XppmemberModifiersContext Mods => this.Modifiers;
             public AttributesContext Atts => this.Attributes;
-            public StatementBlockContext Statements { get { return this.StmtBlk; } set { this.StmtBlk = value; } }
+            public StatementBlockContext Statements => StmtBlk;
+            public void SetStatements(StatementBlockContext stmts) => this.StmtBlk = stmts;
             public ParameterListContext Parameters => this.ParamList;
             public IList<object> LocalFunctions { get; set; } = null;
             public ExpressionContext ExprBody { get { return this.ExpressionBody; } }
         }
-        public partial class XppinlineMethodContext : IXPPEntityContext, IBodyWithLocalFunctions
+        public partial class XppinlineMethodContext : IXPPMemberContext, IBodyWithLocalFunctions
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => this.ParamList;
             public DatatypeContext ReturnType => this.Type;
-            public String ShortName => this.Id.GetText();
-            public String Name
+            public string ShortName => this.Id.GetText();
+            public string Name
             {
                 get
                 {
@@ -880,10 +1005,13 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                     return ParentName + name;
                 }
             }
+#if !VSPARSER
             public InternalSyntax.XppDeclaredMethodInfo Info { get; set; }
+#endif
             public XppmemberModifiersContext Mods => this.Modifiers;
             public AttributesContext Atts => this.Attributes;
-            public StatementBlockContext Statements { get { return this.StmtBlk; } set { this.StmtBlk = value; } }
+            public StatementBlockContext Statements => StmtBlk;
+            public void SetStatements(StatementBlockContext stmts) => this.StmtBlk = stmts;
             public ParameterListContext Parameters => this.ParamList;
             public IList<object> LocalFunctions { get; set; } = null;
             public ExpressionContext ExprBody { get { return this.ExpressionBody; } }
@@ -897,14 +1025,16 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
         {
             public bool XSharpRuntime;
         }
-        public partial class XpppropertyContext : IEntityContext
+        public partial class XpppropertyContext : IMemberContext
         {
-            readonly EntityData data = new();
-            public EntityData Data => data;
+#if !VSPARSER
+            readonly MemberData data = new();
+            public MemberData Data => data;
+#endif
             public ParameterListContext Params => null;
             public DatatypeContext ReturnType => this.Type;
-            public String ShortName => this.Id.GetText();
-            public String Name
+            public string ShortName => this.Id.GetText();
+            public string Name
             {
                 get
                 {
@@ -913,9 +1043,11 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 }
             }
         }
-        public partial class FoxclassContext : IPartialPropertyContext, IEntityContext
+        public partial class FoxclassContext : IPartialPropertyContext, ITypeContext
         {
-            readonly EntityData data = new();
+#if !VSPARSER
+            readonly TypeData data = new();
+            public TypeData Data => data;
             List<IMethodContext> partialProperties = null;
 
             public List<IMethodContext> PartialProperties
@@ -923,11 +1055,9 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 get { return partialProperties; }
                 set { partialProperties = value; }
             }
-            public EntityData Data => data;
-            public ParameterListContext Params => null;
-            public DatatypeContext ReturnType => null;
-            public String Name => ParentName + ShortName;
-            public String ShortName => Id.GetText();
+#endif
+            public string Name => ParentName + ShortName;
+            public string ShortName => Id.GetText();
 
         }
 
@@ -956,7 +1086,7 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             internal string FieldName => Name.GetText().ToUpper();
         }
 
-#endif
+
     }
 
     [DebuggerDisplay("{DebuggerDisplay()}")]
@@ -1106,7 +1236,7 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
     [DebuggerDisplay("{_fieldType} {FullName}")]
     public class MemVarFieldInfo
     {
-        private enum MemvarType: byte
+        private enum MemvarType : byte
         {
             Memvar,
             Field,
@@ -1239,12 +1369,12 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             IsFileWidePublic = filewidepublic;
         }
     }
-
+#endif
     internal static class RuleExtensions
     {
         internal static XSharpParserRuleContext Context([NotNull] this XSharpParser.IEntityContext entity) => (XSharpParserRuleContext)entity;
         internal static bool isScript([NotNull] this XSharpParser.IEntityContext entity) => entity is XSharpParser.ScriptContext;
-
+#if !VSPARSER
         internal static bool IsStatic(this InternalSyntax.ClassDeclarationSyntax classdecl)
         {
             return classdecl.Modifiers.Any((int)SyntaxKind.StaticKeyword);
@@ -1307,7 +1437,7 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                 return node.WithDiagnosticsGreen(result);
             }
         }
-
+#endif
         internal static bool IsRealCodeBlock([NotNull] this IXParseTree context)
         {
 
@@ -1360,7 +1490,8 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
                     return null;
                 // when no => operator and no explicit parameters
                 // then this is a true codeblock
-                return cbc.SourceText;
+                if (context is XSharpParserRuleContext rule)
+                    return rule.SourceText;
             }
             return null;
         }
@@ -1421,6 +1552,6 @@ namespace LanguageService.CodeAnalysis.XSharp.SyntaxParser
             else
                 return parent.isInStructure();
         }
-}
-#endif
+    }
+
 }

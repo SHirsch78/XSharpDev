@@ -1500,6 +1500,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!op1.HasAnyErrors)
             {
 #if XSHARP
+                XsCheckPsz2String(node, op1, diagnostics);
                 if (Compilation.Options.HasOption(CompilerOption.FoxArraySupport, node))
                 {
                     // convert op2 to methodcall __FoxAssign(op1, op2)

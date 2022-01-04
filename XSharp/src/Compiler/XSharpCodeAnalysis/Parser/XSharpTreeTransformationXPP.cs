@@ -290,13 +290,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 Access Assign Method Path
              EndClass
              Method XbZ_LogWriter:Path(cPath)
-	            if PCount() == 1 .and. ValType(cPath) == 'C'
-		            ::cLogPath := alltrim(iif(empty(cPath), left(AppName(.t.), RAt('\', AppName(.t.))), cPath))
-		            ::cLogPath += iif(right(::cLogPath, 1) == '\', '', '\')
-		            if ::lLogActive .and. ::Stop(.t.)
-			            ::Open()
-		            endif
-	            endif
+                if PCount() == 1 .and. ValType(cPath) == 'C'
+                    ::cLogPath := alltrim(iif(empty(cPath), left(AppName(.t.), RAt('\', AppName(.t.))), cPath))
+                    ::cLogPath += iif(right(::cLogPath, 1) == '\', '', '\')
+                    if ::lLogActive .and. ::Stop(.t.)
+                        ::Open()
+                    endif
+                endif
             return (::cLogPath)
              */
             string name = context.Id.GetText();
@@ -409,7 +409,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         #endregion
         #region Methods with Bodies
 
-        private void CheckInitMethods(XP.IEntityContext context)
+        private void CheckInitMethods(XP.IMemberContext context)
         {
             context.Data.MustBeVoid = false;
             var idName = context.ShortName;
@@ -463,6 +463,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
         public override void EnterXppmethod([NotNull] XP.XppmethodContext context)
         {
+            CheckVirtualOverride(context, context.Modifiers?._Tokens);
             Check4ClipperCC(context, context.ParamList?._Params, null, context.Type);
             CheckInitMethods(context);
             string name ;
@@ -513,7 +514,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 }
             }
         }
-        private void implementConstructor([NotNull] XP.IXPPEntityContext context)
+        private void implementConstructor([NotNull] XP.IXPPMemberContext context)
         {
             var idName = context.ShortName;
             var classCtor = XSharpString.Compare(idName, XSharpIntrinsicNames.InitClassMethod) == 0;
@@ -530,7 +531,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
             else
             {
-                context.Statements = null;
+                context.SetStatements(null);
             }
         }
 
@@ -563,7 +564,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             { 
                 modifiers = decodeXppMemberModifiers(context.Info.Visibility, false, context.Modifiers?._Tokens);
             }
-
             TypeSyntax returnType = getDataType(context.Type);
             var attributes = getAttributes(context.Attributes);
             var parameters = getParameters(context.ParamList);
@@ -576,7 +576,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var method = XppCreateMethod(context, name, attributes, modifiers, parameters, returnType);
             context.Put(method);
         }
-        MemberDeclarationSyntax XppCreateMethod(XP.IXPPEntityContext context, SyntaxToken idName, SyntaxList<AttributeListSyntax> attributes,
+        MemberDeclarationSyntax XppCreateMethod(XP.IXPPMemberContext context, SyntaxToken idName, SyntaxList<AttributeListSyntax> attributes,
             SyntaxList<SyntaxToken> modifiers, ParameterListSyntax parameters, TypeSyntax returnType)
         {
             var nobody = context.ExprBody != null;
@@ -893,13 +893,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     modifiers.AddCheckUnique(kw);
                 }
             }
-            if (_options.HasOption(CompilerOption.VirtualInstanceMethods, context, PragmaOptions) && ! hasFinal)
+            bool enforceOverride = _options.HasOption(CompilerOption.EnforceOverride, context, PragmaOptions);
+            if (_options.HasOption(CompilerOption.VirtualInstanceMethods, context, PragmaOptions) && !hasFinal)
             {
-                modifiers.FixDefaultVirtual();
+                modifiers.FixVirtual(enforceOverride);
             }
-            else if (!noOverRide && ! hasFinal)
+            else if (!noOverRide && !hasFinal)
             {
-                modifiers.FixDefaultMethod();
+                modifiers.FixOverride(enforceOverride);
             }
             context.PutList(modifiers.ToList<SyntaxToken>());
             _pool.Free(modifiers);

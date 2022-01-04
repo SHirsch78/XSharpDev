@@ -76,13 +76,5 @@
   <Import Project="$(CoreSource)..\AnalyzerDriver\AnalyzerDriver.projitems" Label="Shared" />
   <Import Project="$(CoreSource)..\..\..\Dependencies\CodeAnalysis.Debugging\Microsoft.CodeAnalysis.Debugging.projitems" Label="Shared" />
   <Import Project="$(CoreSource)..\..\..\Dependencies\PooledObjects\Microsoft.CodeAnalysis.PooledObjects.projitems" Label="Shared" />
-  <ItemGroup>
-    <AdditionalFiles Remove="C:\XSharp\Dev\XSharp\build\Targets\..\config\BannedSymbols.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <AdditionalFiles Remove="C:\XSharp\Dev\XSharp\build\Targets\..\config\BannedSymbols.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="C:\XSharp\Dev\XSharp\..\Roslyn\Src\Compilers\CSharp\Portable\SSyntax\Syntax.xsd" />
-  </ItemGroup>
+  <Import Project="$(CoreSource)..\..\..\Dependencies\Collections\Microsoft.CodeAnalysis.Collections.projitems" Label="Shared" />
 </Project>

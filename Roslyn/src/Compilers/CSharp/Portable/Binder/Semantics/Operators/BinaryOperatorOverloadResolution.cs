@@ -483,6 +483,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.UnderlyingAndEnumAddition, underlying, enumType, enumType));
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.LiftedEnumAndUnderlyingAddition, nullableEnum, nullableUnderlying, nullableEnum));
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.LiftedUnderlyingAndEnumAddition, nullableUnderlying, nullableEnum, nullableEnum));
+#if XSHARP
+                    operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.EnumAddition, enumType, enumType, enumType));
+#endif
                     break;
                 case BinaryOperatorKind.Subtraction:
 #if XSHARP
@@ -491,7 +494,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.LiftedEnumAndUnderlyingSubtraction, nullableEnum, nullableUnderlying, nullableEnum));
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.LiftedUnderlyingAndEnumSubtraction, nullableUnderlying, nullableEnum, nullableEnum));
                     operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.EnumSubtraction, enumType, enumType, enumType));
+
 #else
+
                     if (Strict)
                     {
                         operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.EnumSubtraction, enumType, enumType, underlying));
@@ -1247,7 +1252,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if XSHARP
             if (valOverInPreference == BetterResult.Neither)
             {
-                return VoBetterOperator(op1, op2, left, right, ref useSiteDiagnostics);
+                return VoBetterOperator(op1, op2, left, right, ref useSiteInfo);
             }
 #endif
             return valOverInPreference;

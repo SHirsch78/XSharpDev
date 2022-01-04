@@ -61,7 +61,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private Binder LookupSymbolsWithFallback(LookupResult result, string name, int arity, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo, ConsList<TypeSymbol> basesBeingResolved = null, LookupOptions options = LookupOptions.Default)
         {
 #if XSHARP
-            return XSLookupSymbolsWithFallback(result, name, arity, ref useSiteDiagnostics, basesBeingResolved, options);
+            return XSLookupSymbolsWithFallback(result, name, arity, ref useSiteInfo, basesBeingResolved, options);
 #else
             Debug.Assert(options.AreValid());
 
@@ -86,7 +86,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             LookupResult result, string name, int arity, ConsList<TypeSymbol> basesBeingResolved, LookupOptions options, bool diagnose, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
 #if XSHARP
-            return XSLookupSymbolsInternal(result, name, arity, basesBeingResolved, options, diagnose, ref useSiteDiagnostics);
+            return XSLookupSymbolsInternal(result, name, arity, basesBeingResolved, options, diagnose, ref useSiteInfo);
 #else
             Debug.Assert(result.IsClear);
             Debug.Assert(options.AreValid());

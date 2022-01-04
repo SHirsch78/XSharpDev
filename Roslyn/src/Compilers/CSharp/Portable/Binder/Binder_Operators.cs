@@ -2803,10 +2803,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 resultOperatorKind.WithOverflowChecksIfApplicable(CheckOverflowAtRuntime),
                 resultOperand,
                 resultConstant,
-                resultMethod,
+                signature.Method,
+                signature.ConstrainedToTypeOpt,
                 resultKind,
                 resultType);
-            if (!TypeSymbol.Equals(resultType, operand.Type))
+            if (!Equals(resultType, operand.Type))
             {
                 var newType = VOGetType(operand);
                 if (resultOperatorKind.IsUnaryMinus())

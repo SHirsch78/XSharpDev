@@ -6,7 +6,9 @@
 *.user
 *.userprefs
 *.sln.docstates
+*.svclog
 .vs/
+.vscode/settings.json
 
 # Build results
 [Aa]rtifacts/
@@ -186,12 +188,8 @@ $RECYCLE.BIN/
 # Mac desktop service store files
 .DS_Store
 
-# ANTLR4 generated files
-Generated/
 # JetBrains Rider
 .idea/
 
-
 # WPF temp projects
 *wpftmp.*
-

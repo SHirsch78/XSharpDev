@@ -111,9 +111,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _modifiers = modifiers;
             _explicitInterfaceType = explicitInterfaceType;
 #if XSHARP
+            _name = "";
             _isIndexedProperty = IsIndexer && !string.IsNullOrEmpty((syntax as IndexerDeclarationSyntax)?.ThisKeyword.ValueText);
             _IsGeneratedFromAccessAssign = syntax.XNode is XSharpParser.MethodContext;
-            
 #endif
 
             if (isExplicitInterfaceImplementation)
@@ -164,11 +164,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 #if XSHARP
             if (_isIndexedProperty)
             {
-                _name = _sourceName = (syntax as IndexerDeclarationSyntax)?.ThisKeyword.ValueText;
+                _name = _lazySourceName = (syntax as IndexerDeclarationSyntax)?.ThisKeyword.ValueText;
             }
             else
             { 
-                _name = isIndexer ? ExplicitInterfaceHelpers.GetMemberName(WellKnownMemberNames.Indexer, _explicitInterfaceType, aliasQualifierOpt) : _sourceName;
+                _name = isIndexer ? ExplicitInterfaceHelpers.GetMemberName(WellKnownMemberNames.Indexer, _explicitInterfaceType, aliasQualifierOpt) : _lazySourceName;
             }
 #endif
 

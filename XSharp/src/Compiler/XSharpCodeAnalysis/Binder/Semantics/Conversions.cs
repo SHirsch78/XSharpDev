@@ -52,9 +52,9 @@ namespace Microsoft.CodeAnalysis.CSharp
     }
     internal sealed partial class Conversions
     {
-        override public bool HasBoxingConversion(TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        override public bool HasBoxingConversion(TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
-            bool result = base.HasBoxingConversion(source, destination, ref useSiteDiagnostics);
+            bool result = base.HasBoxingConversion(source, destination, ref useSiteInfo);
 
             if (!result && _binder.Compilation.Options.HasRuntime && destination  is { } && source is NamedTypeSymbol)
             {
@@ -70,7 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             && !Equals(destFrom, _binder.Compilation.ArrayType())
                             && !Equals(destFrom, _binder.Compilation.CodeBlockType())
                             && !destination.IsIFormatProvider()
-                            && destFrom.IsDerivedFrom(_binder.Compilation.CodeBlockType(), TypeCompareKind.IgnoreDynamicAndTupleNames, ref useSiteDiagnostics) != true
+                            && destFrom.IsDerivedFrom(_binder.Compilation.CodeBlockType(), TypeCompareKind.IgnoreDynamicAndTupleNames, ref useSiteInfo) != true
                             && !IsClipperArgsType(destination);
                     }
                     else if (destination.IsPointerType())
@@ -128,7 +128,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (op != null)
                     {
                         var sourceType = _binder.Compilation.GetSpecialType(SpecialType.System_Object);
-                        UserDefinedConversionAnalysis uca = UserDefinedConversionAnalysis.Normal(op, Conversion.ImplicitReference, Conversion.Identity, sourceType, destination);
+                        UserDefinedConversionAnalysis uca = UserDefinedConversionAnalysis.Normal(null, op, Conversion.ImplicitReference, Conversion.Identity, sourceType, destination);
                         UserDefinedConversionResult cr = UserDefinedConversionResult.Valid(new[] { uca }.AsImmutable(), 0);
                         conv = new Conversion(cr, isImplicit: true);
                         return ConversionKind.ImplicitUserDefined;
@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return res;
         }
 
-        protected override Conversion ClassifyCoreImplicitConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected override Conversion ClassifyCoreImplicitConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             // Parameters checks have been done in the calling code
             // The following conversion Rules are for all dialects 
@@ -288,7 +288,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return false;
         }
 
-        protected override Conversion ClassifyVOImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected override Conversion ClassifyVOImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             // Parameters checks have been done in the calling code
             var srcType = source.SpecialType;
@@ -539,10 +539,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
             // when nothing else, then use the Core rules
-            return ClassifyCoreImplicitConversionFromExpression(sourceExpression, source, destination, ref useSiteDiagnostics);
+            return ClassifyCoreImplicitConversionFromExpression(sourceExpression, source, destination, ref useSiteInfo);
         }
 
-        protected override Conversion ClassifyNullConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected override Conversion ClassifyNullConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfos)
         {
             if (sourceExpression.Kind == BoundKind.Literal && sourceExpression.IsLiteralNull())
             {
@@ -554,16 +554,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return Conversion.NoConversion;
         }
-        protected override Conversion ClassifyXSImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected override Conversion ClassifyXSImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfos)
         {
             if (source is null || destination is null )
             {
-                return ClassifyNullConversionFromExpression(sourceExpression, source, destination, ref useSiteDiagnostics);
+                return ClassifyNullConversionFromExpression(sourceExpression, source, destination, ref useSiteInfos);
             }
             if (Compilation.Options.HasRuntime)
-                return ClassifyVOImplicitBuiltInConversionFromExpression(sourceExpression, source, destination, ref useSiteDiagnostics);
+                return ClassifyVOImplicitBuiltInConversionFromExpression(sourceExpression, source, destination, ref useSiteInfos);
             else
-                return ClassifyCoreImplicitConversionFromExpression(sourceExpression, source, destination, ref useSiteDiagnostics);
+                return ClassifyCoreImplicitConversionFromExpression(sourceExpression, source, destination, ref useSiteInfos);
         }
 
         protected override bool IsClipperArgsType(TypeSymbol args)
@@ -588,20 +588,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             return false;
         }
 
-        protected virtual Conversion ClassifyCoreImplicitConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected virtual Conversion ClassifyCoreImplicitConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             return Conversion.NoConversion;
         }
-        protected virtual Conversion ClassifyVOImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected virtual Conversion ClassifyVOImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             return Conversion.NoConversion;
         }
-        protected virtual Conversion ClassifyNullConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected virtual Conversion ClassifyNullConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             return Conversion.NoConversion;
         }
 
-        protected virtual Conversion ClassifyXSImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        protected virtual Conversion ClassifyXSImplicitBuiltInConversionFromExpression(BoundExpression sourceExpression, TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfos)
         {
             return Conversion.NoConversion;
         }

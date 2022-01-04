@@ -696,7 +696,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         public override FileLinePositionSpan GetMappedLineSpan(TextSpan span, CancellationToken cancellationToken = default)
 #if XSHARP
-            => return GetXNodeSpan(span);
+            => GetXNodeSpan(span);
 #else
             => GetDirectiveMap().TranslateSpan(GetText(cancellationToken), this.FilePath, span);
 #endif

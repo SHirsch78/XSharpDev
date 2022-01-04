@@ -179,7 +179,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     }
                     if (param.Attributes != null)
                     {
-                        _parseErrors.Add(new ParseErrorData(param.Stop, ErrorCode.ERR_AttributesInLocalFuncDecl));
+                        _parseErrors.Add(new ParseErrorData(param.Stop, ErrorCode.ERR_AttributesNotAllowed));
                     }
                 }
             }

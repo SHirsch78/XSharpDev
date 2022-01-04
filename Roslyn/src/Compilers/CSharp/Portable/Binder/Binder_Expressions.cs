@@ -2316,8 +2316,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                         operatorKind: BinaryOperatorKind.NotEqual,
                         left: operand,
                         right: right,
-                        constantValueOpt: default,
-                        methodOpt: default,
+                        constantValueOpt: null,
+                        methodOpt: null,
+                        constrainedToTypeOpt: null,
                         resultKind: LookupResultKind.Viable,
                         type: targetType);
                 }
@@ -2791,7 +2792,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (argumentSyntax.NameColon != null)
                 {
                     var argName = argumentSyntax.NameColon.Name;
-                    DiagnosticBag tempDiagnostics = new DiagnosticBag();
+                    var tempDiagnostics = BindingDiagnosticBag.GetInstance();
                     var local = BindExpression(argName, tempDiagnostics);
                     if (local.Kind == BoundKind.Local)
                     {
@@ -3142,11 +3143,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var kind = result.ConversionForArg(arg);
                 BoundExpression argument = arguments[arg];
+                if (kind.IsInterpolatedStringHandler)
+                {
+                    Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
+                    TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
+                    reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
+                    arguments[arg] = BindInterpolatedStringHandlerInMemberCall(argument, arguments, parameters, ref result, arg, receiverType, receiverEscapeScope, diagnostics);
+                }
+                else if (!kind.IsIdentity)
+                {
 
 #if XSHARP
                     TypeWithAnnotations parameterTypeWithAnnotations = XsGetCorrespondingParameterType(ref result, parameterTypes, arg);
                     argument = XsFixPszArgumentProblems(argument, parameterTypeWithAnnotations, ref kind);
-                    Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
+                    //Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
                     // Do not add Conversions for BoundAddressOf operator when compiling with /vo7+
                     if (argument is BoundAddressOfOperator bad &&
                         this.Compilation.Options.HasOption(CompilerOption.ImplicitCastsAndConversions, argument.Syntax) &&
@@ -3167,22 +3177,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                             diagnostics: diagnostics);
                     }
 #else
-                if (kind.IsInterpolatedStringHandler)
-                {
-                    Debug.Assert(argument is BoundUnconvertedInterpolatedString or BoundBinaryOperator { IsUnconvertedInterpolatedStringAddition: true });
-                    TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
-                    reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
-                    arguments[arg] = BindInterpolatedStringHandlerInMemberCall(argument, arguments, parameters, ref result, arg, receiverType, receiverEscapeScope, diagnostics);
-                }
                 // https://github.com/dotnet/roslyn/issues/37119 : should we create an (Identity) conversion when the kind is Identity but the types differ?
-                else if (!kind.IsIdentity)
-                {
                     TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
                     reportUnsafeIfNeeded(methodResult, diagnostics, argument, parameterTypeWithAnnotations);
 
                     arguments[arg] = CreateConversion(argument.Syntax, argument, kind, isCast: false, conversionGroupOpt: null, parameterTypeWithAnnotations.Type, diagnostics);
 #endif
                 }
+
                 else if (argument.Kind == BoundKind.OutVariablePendingInference)
                 {
                     TypeWithAnnotations parameterTypeWithAnnotations = GetCorrespondingParameterTypeWithAnnotations(ref result, parameters, arg);
@@ -6111,31 +6113,31 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression boundLeft;
 
             ExpressionSyntax exprSyntax = node.Expression;
-#if XSHARP
-            // First attempt simpleMemberAccess resolution ...
-            // NOTE: CheckValue will be called explicitly in BindMemberAccessWithBoundLeft.
-            var diag = DiagnosticBag.GetInstance();
-            boundLeft = BindLeftOfPotentialColorColorMemberAccess(exprSyntax, diag);
-            if (!boundLeft.Type.IsPointerType())
-            {
-                diagnostics.AddRange(diag);
-            }
-            else
-            {
-                // Then try pointerMemberAccess resolution...
-                boundLeft = this.BindExpression(exprSyntax, diagnostics); // Not Color Color issues with ->
-                TypeSymbol pointedAtType;
-                bool hasErrors;
-                BindPointerIndirectionExpressionInternal(node, boundLeft, diagnostics, out pointedAtType, out hasErrors);
-                if (!ReferenceEquals(pointedAtType, null)) // do not raise an error if it was not a pointer type
-                {
-                    boundLeft = new BoundPointerIndirectionOperator(exprSyntax, boundLeft, pointedAtType, hasErrors)
-                    {
-                        WasCompilerGenerated = true, // don't interfere with the type info for exprSyntax.
-                    };
-                }
-            }
-#else
+//#if XSHARP
+//            // First attempt simpleMemberAccess resolution ...
+//            // NOTE: CheckValue will be called explicitly in BindMemberAccessWithBoundLeft.
+//            var diag = BindingDiagnosticBag.GetInstance();
+//            boundLeft = BindLeftOfPotentialColorColorMemberAccess(exprSyntax, diag);
+//            if (!boundLeft.Type.IsPointerType())
+//            {
+//                diagnostics.AddRange(diag);
+//            }
+//            else
+//            {
+//                // Then try pointerMemberAccess resolution...
+//                boundLeft = this.BindExpression(exprSyntax, diagnostics); // Not Color Color issues with ->
+//                TypeSymbol pointedAtType;
+//                bool hasErrors;
+//                BindPointerIndirectionExpressionInternal(node, boundLeft, diagnostics, out pointedAtType, out hasErrors);
+//                if (!ReferenceEquals(pointedAtType, null)) // do not raise an error if it was not a pointer type
+//                {
+//                    boundLeft = new BoundPointerIndirectionOperator(exprSyntax, boundLeft, pointedAtType, hasErrors)
+//                    {
+//                        WasCompilerGenerated = true, // don't interfere with the type info for exprSyntax.
+//                    };
+//                }
+//            }
+//#else
             if (node.Kind() == SyntaxKind.SimpleMemberAccessExpression)
             {
                 // NOTE: CheckValue will be called explicitly in BindMemberAccessWithBoundLeft.
@@ -6168,7 +6170,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     };
                 }
             }
-#endif
+//#endif
 
             return BindMemberAccessWithBoundLeft(node, boundLeft, node.Name, node.OperatorToken, invoked, indexed, diagnostics);
         }
@@ -6203,7 +6205,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var valueDiagnostics = BindingDiagnosticBag.Create(diagnostics);
 #if XSHARP
-                var boundValue = BindXSIdentifier(node, invoked: false, indexed: false, diagnostics: valueDiagnostics, bindMethod: false);
+                var boundValue = BindXSIdentifier(left, invoked: false, indexed: false, diagnostics: valueDiagnostics, bindMethod: false);
 #else
             var boundValue = BindIdentifier(left, invoked: false, indexed: false, diagnostics: valueDiagnostics);
 #endif
@@ -6363,9 +6365,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
 #if XSHARP
-            BoundExpression result = TryBindLateBoundCall(node, boundLeft, leftType, right, invoked, indexed, diagnostics);
-            if (result != null)
-                return result;
+            BoundExpression xsresult = TryBindLateBoundCall(node, boundLeft, leftType, right, invoked, indexed, diagnostics);
+            if (xsresult != null)
+                return xsresult;
 
 #endif
             // No member accesses on void
@@ -8803,7 +8805,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if XSHARP
                 if (result.Succeeded && result.ValidResult.Result.HasAnyRefOmittedArgument && !methodGroup.Receiver.IsExpressionOfComImportType())
                 {
-                    DiagnosticBag diagnostics = DiagnosticBag.GetInstance();
+                    var diagnostics = BindingDiagnosticBag.GetInstance();
                     CheckValidRefOmittedArguments(result, analyzedArguments, diagnostics);
                     sealedDiagnostics = diagnostics.ToReadOnlyAndFree();
                 }

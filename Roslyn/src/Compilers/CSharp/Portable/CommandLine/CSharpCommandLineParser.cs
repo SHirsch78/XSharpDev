@@ -197,11 +197,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                     continue;
                 }
 
+                string? value = "";
 #if XSHARP
+                value = RemoveQuotesAndSlashes(valueMemory);
+                string? name = nameMemory.ToString().ToLowerInvariant();
                 if (ParseXSharpArgument(ref name, ref value, arg, diagnostics))
                     continue;
 #endif
-                string? value;
                 string? valueMemoryString() => valueMemory is { } m ? m.Span.ToString() : null;
 
                 // The main 'switch' for argument handling forces an allocation of the option name field. For the most 
@@ -261,8 +263,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     continue;
                 }
-
+#if XSHARP
+                //name = nameMemory.Span.ToString().ToLowerInvariant();
+#else
                 string name = nameMemory.Span.ToString().ToLowerInvariant();
+#endif
                 switch (name)
                 {
                     case "?":

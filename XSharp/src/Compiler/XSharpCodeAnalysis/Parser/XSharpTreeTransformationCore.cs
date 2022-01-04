@@ -1476,7 +1476,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 if (bStatic)
                     tokenStatic = SyntaxFactory.MakeToken(SyntaxKind.StaticKeyword);
 
-                usings.Add(_syntaxFactory.UsingDirective(SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                usings.Add(_syntaxFactory.UsingDirective(null, SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
                     tokenStatic,
                     alias,
                     usingName,
@@ -2420,7 +2420,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 if (body != null || expr != null)
                 {
                     e = _syntaxFactory.ParenthesizedLambdaExpression(
+                        attributeLists: default,
                         modifiers: default,
+                        returnType: null,
                         parameterList: EmptyParameterList(),
                         arrowToken: SyntaxFactory.MakeToken(SyntaxKind.EqualsGreaterThanToken),
                         block: body,
@@ -2430,7 +2432,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (e == null)
             {
                 e = _syntaxFactory.ParenthesizedLambdaExpression(
+                    attributeLists: default,
                     modifiers: default,
+                    returnType: null,
                     parameterList: EmptyParameterList(),
                     arrowToken: SyntaxFactory.MakeToken(SyntaxKind.EqualsGreaterThanToken),
                     block: null,
@@ -2669,7 +2673,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public override void ExitUsing_([NotNull] XP.Using_Context context)
         {
-            context.Put(_syntaxFactory.UsingDirective(SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+            context.Put(_syntaxFactory.UsingDirective(null, SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
                 staticKeyword: context.Static?.SyntaxKeyword(),
                 alias: context.Alias == null ? null : _syntaxFactory.NameEquals(context.Alias.Get<IdentifierNameSyntax>(), SyntaxFactory.MakeToken(SyntaxKind.EqualsToken)),
                 name: context.Name.Get<NameSyntax>(),
@@ -4385,6 +4389,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 context.Put(_syntaxFactory.ConversionOperatorDeclaration(
                     attributeLists: getAttributes(context.Attributes),
                     modifiers: context.Modifiers?.GetList<SyntaxToken>() ?? TokenListWithDefaultVisibility(false, SyntaxKind.StaticKeyword),
+                    explicitInterfaceSpecifier:null,
                     implicitOrExplicitKeyword: context.Conversion.Get<SyntaxToken>(),
                     operatorKeyword: SyntaxFactory.MakeToken(SyntaxKind.OperatorKeyword),
                     type: getReturnType(context),
@@ -4414,6 +4419,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 context.Put(_syntaxFactory.OperatorDeclaration(
                     attributeLists: getAttributes(context.Attributes),
                     modifiers: context.Modifiers?.GetList<SyntaxToken>() ?? TokenListWithDefaultVisibility(false, SyntaxKind.StaticKeyword),
+                    explicitInterfaceSpecifier: null,
                     returnType: getReturnType(context),
                     operatorKeyword: SyntaxFactory.MakeToken(SyntaxKind.OperatorKeyword),
                     operatorToken: opToken,
@@ -9352,8 +9358,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 body = MakeBlock(newstmts);
             }
             var node = _syntaxFactory.ParenthesizedLambdaExpression(
+                attributeLists: default,
                 modifiers: default,
                 parameterList: paramList,
+                returnType: null,
                 arrowToken: SyntaxFactory.MakeToken(SyntaxKind.EqualsGreaterThanToken),
                 block: body as BlockSyntax,
                 expressionBody: body as ExpressionSyntax

@@ -74,7 +74,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         // Options that can be set from the outside
         // Some options are also handled by the parser
         // Other options have flags, for the preprocessor macros, such as __VO1__
-        const LanguageVersion defaultLanguageVersion = LanguageVersion.CSharp9;
+        const LanguageVersion defaultLanguageVersion = LanguageVersion.CSharp10;
         #region private fields (need to be access with HasOption)
         private bool ArrayZero = false;
         private bool FoxInheritUnknown = false;
@@ -344,7 +344,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var result = new CSharpParseOptions(this);
             result.SetXSharpSpecificOptions(this);
             result.MacroScript = macroScript;
-            result.LanguageVersion = LanguageVersion.CSharp9;
+            result.LanguageVersion = LanguageVersion.CSharp10;
             return result;
         }
 

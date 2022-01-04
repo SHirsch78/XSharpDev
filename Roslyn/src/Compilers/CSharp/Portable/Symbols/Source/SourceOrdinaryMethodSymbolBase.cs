@@ -98,21 +98,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             var (returnType, parameters, isVararg, declaredConstraints) = MakeParametersAndBindReturnType(diagnostics);
 
-
+/*
 #if XSHARP
-		// TODO Check the code in the parent class !
-                    // additional checks to see if we are overriding clipper with non clipper etc.
-                    overriddenOrExplicitlyImplementedMethod = validateMethod(overriddenOrExplicitlyImplementedMethod, diagnostics, location);
+            // TODO RvdH Check the code in the parent class !
+            // additional checks to see if we are overriding clipper with non clipper etc.
+            MethodSymbol? overriddenOrExplicitlyImplementedMethod = validateMethod(this.OverriddenMethod, diagnostics, this.Locations.FirstOrDefault());
 
-                if (this.HasClipperCallingConvention() != overriddenOrExplicitlyImplementedMethod.HasClipperCallingConvention())
-                {
-                    diagnostics.Add(ErrorCode.ERR_InterfaceImplementationDifferentCallingConvention, Locations[0], this,overriddenOrExplicitlyImplementedMethod);
-                    overriddenOrExplicitlyImplementedMethod = null;
-                }
+            if (this.HasClipperCallingConvention() != overriddenOrExplicitlyImplementedMethod.HasClipperCallingConvention())
+            {
+                diagnostics.Add(ErrorCode.ERR_InterfaceImplementationDifferentCallingConvention, Locations[0], this,overriddenOrExplicitlyImplementedMethod);
+                overriddenOrExplicitlyImplementedMethod = null;
+            }
 #else
+*/
             MethodSymbol? overriddenOrExplicitlyImplementedMethod = MethodChecks(returnType, parameters, diagnostics);
 
-#endif
+//#endif
 
             if (!declaredConstraints.IsDefault && overriddenOrExplicitlyImplementedMethod is object)
             {
@@ -446,7 +447,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
 #if XSHARP
                 var syntax = this.DeclaringSyntaxReferences[0].GetSyntax();
-                bool wasExplicitVirtual = !this.DeclaringCompilation.Options.VirtualInstanceMethods;
+                bool wasExplicitVirtual = !this.DeclaringCompilation.Options.HasOption(CompilerOption.VirtualInstanceMethods, syntax);
                 var node = syntax.XNode;
                 if (node is not XP.IMemberContext ent)
                 {

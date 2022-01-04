@@ -10,7 +10,7 @@
     <AssemblyName>XSharp.CodeAnalysis</AssemblyName>
     <RootNamespace>LanguageService.CodeAnalysis.XSharp</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>1591,1573,1701,3021,RS0016</NoWarn> 
+    <NoWarn>1591,1573,1701,3021,RS0016,CS8032</NoWarn> 
     <!--<CodeAnalysisRuleSet>$(RoslynSrc)\Compilers\CSharp\CSharpCodeAnalysisRules.ruleset</CodeAnalysisRuleSet>-->
     <NoStdLib>true</NoStdLib>
     <GenerateMicrosoftCodeAnalysisCommitHashAttribute>false</GenerateMicrosoftCodeAnalysisCommitHashAttribute>
@@ -114,7 +114,6 @@
     <Compile Include="$(CoreSource)**\*.cs">
       <Link>Core\%(RecursiveDir)\%(Filename)%(Extension)</Link>
     </Compile>
-    <Compile Remove="$(CoreSource)CodeAnalysisResources.Designer.cs" />
     <!--  RESX files are not included. We have a copy of then in our own folder-->
     <!-- <EmbeddedResource Include="$(CSharpSource)**\*.resx" /> -->
     <!--<EmbeddedResource Include="$(CoreSource)**\*.resx" />-->
@@ -125,9 +124,6 @@
     <Compile Remove="VsParser\**" />
     <EmbeddedResource Remove="Declarations\**" />
     <EmbeddedResource Remove="VsParser\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Remove="CodeAnalysisResources.resx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(CoreSource)..\CodeAnalysisRules.ruleset">
@@ -144,6 +140,8 @@
   <Import Project="$(CoreSource)..\AnalyzerDriver\AnalyzerDriver.projitems" Label="Shared" />
   <Import Project="$(RoslynSrc)Dependencies\CodeAnalysis.Debugging\Microsoft.CodeAnalysis.Debugging.projitems" Label="Shared" />
   <Import Project="$(RoslynSrc)Dependencies\PooledObjects\Microsoft.CodeAnalysis.PooledObjects.projitems" Label="Shared" />
+  <Import Project="$(RoslynSrc)Dependencies\Collections\Microsoft.CodeAnalysis.Collections.projitems" Label="Shared" />
+
   <PropertyGroup>
     <PreBuildEvent>
       $(AntlrCall) $(AntlrParams) $(AntlrInputdir)XSharpLexer.g4 

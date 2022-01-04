@@ -129,7 +129,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if XSHARP
            else 
            {
-                if (sourceType.SpecialType == SpecialType.System_Void)
+                if (sourceType is { } && sourceType.SpecialType == SpecialType.System_Void)
                 {
                     return Conversion.NoConversion;
                 }
@@ -1072,7 +1072,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 #if !XSHARP
             return Conversion.NoConversion;
 #else
-            return ClassifyXSImplicitBuiltInConversionFromExpression(sourceExpression, source, destination, ref useSiteDiagnostics);
+            return ClassifyXSImplicitBuiltInConversionFromExpression(sourceExpression, source, destination, ref useSiteInfo);
 #endif
         }
 
@@ -3125,7 +3125,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return false;
         }
 
+#if XSHARP
+        public virtual bool HasBoxingConversion(TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
+#else
         public bool HasBoxingConversion(TypeSymbol source, TypeSymbol destination, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
+#endif
         {
             Debug.Assert((object)source != null);
             Debug.Assert((object)destination != null);

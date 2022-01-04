@@ -139,9 +139,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 _overrideState = 2;  // checked and has a (correct) override
 
-                CustomModifierUtils.CopyMethodCustomModifiers(overriddenMethod, this, out _lazyReturnType,
-                                                              out _lazyRefCustomModifiers,
-                                                              out _lazyParameters, alsoCopyParamsModifier: true);
+                CustomModifierUtils.CopyMethodCustomModifiers(overriddenMethod, this, out var _lazyReturnType,
+                                                              out var _lazyRefCustomModifiers,
+                                                              out var _lazyParameters, alsoCopyParamsModifier: true);
             }
             var node = this.SyntaxNode.Green as Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.MethodDeclarationSyntax;
             if (node != null)   // This can be a generated node, for example for Records

@@ -114,7 +114,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         private BoundExpression BindXsInvocationExpression(
             InvocationExpressionSyntax node,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
         {
             // Handle PCall() and Chr() in this special method
             BoundExpression result;
@@ -188,7 +188,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         }
 
-        private BoundExpression BindFoxProArrayPossibleAccess(InvocationExpressionSyntax node, AnalyzedArguments analyzedArguments, DiagnosticBag diagnostics)
+        private BoundExpression BindFoxProArrayPossibleAccess(InvocationExpressionSyntax node, AnalyzedArguments analyzedArguments, BindingDiagnosticBag diagnostics)
         {
             if (node.XGenerated)
                 return null;
@@ -254,7 +254,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return null;
         }
-        private void BindPCall(InvocationExpressionSyntax node, DiagnosticBag diagnostics, AnalyzedArguments analyzedArguments)
+        private void BindPCall(InvocationExpressionSyntax node, BindingDiagnosticBag diagnostics, AnalyzedArguments analyzedArguments)
         {
             if (node.XPCall && node.Expression is GenericNameSyntax)
             {
@@ -301,7 +301,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
         private void BindPCallAndDelegate(InvocationExpressionSyntax node, ArrayBuilder<BoundExpression> args,
-                DiagnosticBag diagnostics, TypeSyntax type)
+                BindingDiagnosticBag diagnostics, TypeSyntax type)
         {
             var XNode = node.XNode as XP.MethodCallContext;
             string method = XNode?.Expr.GetText();
@@ -349,10 +349,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return;
             }
             var lookupResult = LookupResult.GetInstance();
-            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            CompoundUseSiteInfo<AssemblySymbol> useSiteInfo = GetNewCompoundUseSiteInfo(diagnostics);
             LookupOptions options = LookupOptions.AllMethodsOnArityZero;
             options |= LookupOptions.MustNotBeInstance;
-            this.LookupSymbolsWithFallback(lookupResult, methodName, arity: 0, useSiteDiagnostics: ref useSiteDiagnostics, options: options);
+            this.LookupSymbolsWithFallback(lookupResult, methodName, arity: 0, useSiteInfo: ref useSiteInfo, options: options);
             SourceMethodSymbol methodSym = null;
             if (lookupResult.IsClear)
             {
@@ -378,7 +378,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (methodSym != null)
             {
                 lookupResult.Clear();
-                var ts = FindPCallDelegateType(type as IdentifierNameSyntax);
+                var ts = FindPCallDelegateType(type as IdentifierNameSyntax, ref useSiteInfo);
                 if (ts is { } && ts.IsDelegateType())
                 {
                     SourceDelegateMethodSymbol delmeth = ts.DelegateInvokeMethod() as SourceDelegateMethodSymbol;
@@ -392,7 +392,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                             ordinal: par.Ordinal,
                             refKind: par.RefKind,
                             name: par.Name,
-                            isDiscard: false,
                             locations: par.Locations);
                         builder.Add(parameter);
                     }
@@ -406,16 +405,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return;
         }
-        private TypeSymbol FindPCallDelegateType(IdentifierNameSyntax type)
+        private TypeSymbol FindPCallDelegateType(IdentifierNameSyntax type, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             if (type == null)
                 return null;
             var lookupResult = LookupResult.GetInstance();
             try
             {
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
                 LookupOptions options = LookupOptions.NamespacesOrTypesOnly;
-                this.LookupSymbolsSimpleName(lookupResult, null, type.Identifier.Text, 0, null, options, false, ref useSiteDiagnostics);
+                this.LookupSymbolsSimpleName(lookupResult, null, type.Identifier.Text, 0, null, options, false, ref useSiteInfo);
                 if (lookupResult.IsSingleViable)
                 {
                     return lookupResult.Symbols[0] as TypeSymbol;
@@ -430,7 +428,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private bool ValidatePCallArguments(InvocationExpressionSyntax node, ArrayBuilder<BoundExpression> args,
-                DiagnosticBag diagnostics, string method)
+                BindingDiagnosticBag diagnostics, string method)
         {
             bool ok = args.Count == 1;
             if (ok)
@@ -448,7 +446,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private void BindPCallNativeAndDelegate(InvocationExpressionSyntax node, ArrayBuilder<BoundExpression> args,
-                DiagnosticBag diagnostics, TypeSyntax type)
+                BindingDiagnosticBag diagnostics, TypeSyntax type)
         {
             var XNode = node.XNode as XP.MethodCallContext;
             string method = XNode?.Expr.GetText();
@@ -460,7 +458,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             AnalyzedArguments analyzedArguments = AnalyzedArguments.GetInstance();
             try
             {
-                var ts = FindPCallDelegateType(type as IdentifierNameSyntax);
+                var useSiteInfo = GetNewCompoundUseSiteInfo(diagnostics);
+                var ts = FindPCallDelegateType(type as IdentifierNameSyntax, ref useSiteInfo);
                 if (ts is { } && ts.IsDelegateType())
                 {
                     var delmeth = ts.DelegateInvokeMethod() as SourceDelegateMethodSymbol;
@@ -482,7 +481,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                             ordinal: i,
                             refKind: delparams[i].RefKind,
                             name: delparams[i].Name,
-                            isDiscard: false,
                             locations: delparams[i].Locations);
                         builder.Add(parameter);
                         i++;

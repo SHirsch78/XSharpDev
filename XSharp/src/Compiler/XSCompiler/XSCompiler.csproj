@@ -17,6 +17,7 @@
     <CSCToolExe>$(GeneratedCompilerPath)csc.exe</CSCToolExe>
     <GenerateMicrosoftCodeAnalysisCommitHashAttribute>false</GenerateMicrosoftCodeAnalysisCommitHashAttribute>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>CS8032</NoWarn>
 
   </PropertyGroup>
   <ItemGroup Label="Project References">

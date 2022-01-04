@@ -80,7 +80,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private bool ImplementsStandardQueryInterface(TypeSymbol instanceType, string name, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
 #if XSHARP
-            if (instanceType.TypeKind == TypeKind.Array || XSharpString.Equals(name, "Cast") && HasCastToQueryProvider(instanceType, ref useSiteDiagnostics))
+            if (instanceType.TypeKind == TypeKind.Array || XSharpString.Equals(name, "Cast") && HasCastToQueryProvider(instanceType, ref useSiteInfo))
 #else
             if (instanceType.TypeKind == TypeKind.Array || name == "Cast" && HasCastToQueryProvider(instanceType, ref useSiteInfo))
 #endif

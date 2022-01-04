@@ -453,7 +453,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             LocalSymbol callTemp = _factory.SynthesizedLocal(nodeType);
             BoundLocal boundCallTemp = _factory.Local(callTemp);
-            var call = MakeCall(node, node.Syntax, rewrittenReceiver, node.Method, rewrittenArguments, argumentRefKindsOpt, node.InvokedAsExtensionMethod, node.ResultKind, node.Type);
+            var call = MakeCall(node, node.Syntax, rewrittenReceiver, node.Method, rewrittenArguments, argumentRefKindsOpt, node.InvokedAsExtensionMethod, node.ResultKind, node.Type, default);
             if (mustassign)
             {
                 BoundExpression callAssignment = _factory.AssignmentExpression(boundCallTemp, call);
@@ -487,8 +487,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var rewrittenArgumentRefKindsOpt = argumentRefKindsOpt;
             var rewrittenArguments = rewrittenArgs.ToImmutable();
-            ImmutableArray<LocalSymbol> aTemps;
-            rewrittenArguments = MakeArguments(syntax, rewrittenArguments, method, expanded, argsToParamsOpt, ref rewrittenArgumentRefKindsOpt, out aTemps, invokeAsExtensionMethod);
+            var aTemps = ArrayBuilder<LocalSymbol>.GetInstance();
+            rewrittenArguments = MakeArguments(syntax, rewrittenArguments, method, expanded, argsToParamsOpt, ref rewrittenArgumentRefKindsOpt, ref aTemps, invokeAsExtensionMethod);
             argTemps.AddRange(aTemps);
 
             var argsNode = rewrittenArguments[rewrittenArguments.Length - 1];

@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     }
     internal partial class Binder
     {
-        internal Symbol XSharpResolveEqualSymbols(Symbol first, Symbol second, ImmutableArray<Symbol> originalSymbols, CSharpSyntaxNode where, DiagnosticBag diagnostics)
+        internal Symbol XSharpResolveEqualSymbols(Symbol first, Symbol second, ImmutableArray<Symbol> originalSymbols, CSharpSyntaxNode where, BindingDiagnosticBag diagnostics)
         {
             CSDiagnosticInfo info;
             bool usefirst = false;

@@ -11,8 +11,9 @@ using System.Reflection;
 using Roslyn.Utilities;
 using Microsoft.CodeAnalysis.CommandLine;
 using System.Diagnostics.CodeAnalysis;
+#if ! XSHARPPRE
 using Microsoft.CodeAnalysis.VisualBasic;
-
+#endif
 namespace Microsoft.CodeAnalysis.CompilerServer
 {
     internal static class AnalyzerConsistencyChecker

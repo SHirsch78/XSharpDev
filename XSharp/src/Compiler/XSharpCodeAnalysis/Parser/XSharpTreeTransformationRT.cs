@@ -4179,7 +4179,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 // alias can be a literal, or variable
                 // __AreaEval ( alias, { => Expr })
                 expr = _syntaxFactory.ParenthesizedLambdaExpression(
+                        attributeLists: default,
                         modifiers: default,
+                        returnType: null,
                         parameterList: EmptyParameterList(),
                         arrowToken: SyntaxFactory.MakeToken(SyntaxKind.EqualsGreaterThanToken),
                         block: null,
@@ -4208,7 +4210,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             MakeSimpleMemberAccess(
                 MakeCastTo(_codeblockType,
                     _syntaxFactory.ParenthesizedLambdaExpression(
+                        attributeLists: default,
                         modifiers: default,
+                        returnType: null,
                         parameterList: EmptyParameterList(),
                         arrowToken: SyntaxFactory.MakeToken(SyntaxKind.EqualsGreaterThanToken),
                         block: MakeBlock(MakeList<StatementSyntax>(

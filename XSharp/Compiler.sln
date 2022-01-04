@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29728.190
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "xsc", "src\Compiler\xsc\xsc.csproj", "{AEBEBC71-1FDE-4901-91E0-5667F9BB211A}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -122,6 +122,7 @@ Global
 		..\Roslyn\Src\Compilers\Core\AnalyzerDriver\AnalyzerDriver.projitems*{7b774abc-83a0-4fd8-91fb-1dbe8829765b}*SharedItemsImports = 5
 		..\Roslyn\Src\Compilers\CSharp\CSharpAnalyzerDriver\CSharpAnalyzerDriver.projitems*{7b774abc-83a0-4fd8-91fb-1dbe8829765b}*SharedItemsImports = 5
 		..\Roslyn\Src\Dependencies\CodeAnalysis.Debugging\Microsoft.CodeAnalysis.Debugging.projitems*{7b774abc-83a0-4fd8-91fb-1dbe8829765b}*SharedItemsImports = 5
+		..\Roslyn\Src\Dependencies\Collections\Microsoft.CodeAnalysis.Collections.projitems*{7b774abc-83a0-4fd8-91fb-1dbe8829765b}*SharedItemsImports = 5
 		..\Roslyn\Src\Dependencies\PooledObjects\Microsoft.CodeAnalysis.PooledObjects.projitems*{7b774abc-83a0-4fd8-91fb-1dbe8829765b}*SharedItemsImports = 5
 		..\Roslyn\Src\Compilers\Core\CommandLine\CommandLine.projitems*{9508f118-f62e-4c16-a6f4-7c3b56e166ad}*SharedItemsImports = 5
 		..\Roslyn\Src\Compilers\Core\CommandLine\CommandLine.projitems*{9d02e3f9-7157-46b7-9e97-f62010e4b3f2}*SharedItemsImports = 5
@@ -131,6 +132,7 @@ Global
 		..\Roslyn\Src\Compilers\Core\AnalyzerDriver\AnalyzerDriver.projitems*{f738fd65-ffaf-4f52-8efc-5affd1c42846}*SharedItemsImports = 5
 		..\Roslyn\Src\Compilers\CSharp\CSharpAnalyzerDriver\CSharpAnalyzerDriver.projitems*{f738fd65-ffaf-4f52-8efc-5affd1c42846}*SharedItemsImports = 5
 		..\Roslyn\Src\Dependencies\CodeAnalysis.Debugging\Microsoft.CodeAnalysis.Debugging.projitems*{f738fd65-ffaf-4f52-8efc-5affd1c42846}*SharedItemsImports = 5
+		..\Roslyn\Src\Dependencies\Collections\Microsoft.CodeAnalysis.Collections.projitems*{f738fd65-ffaf-4f52-8efc-5affd1c42846}*SharedItemsImports = 5
 		..\Roslyn\Src\Dependencies\PooledObjects\Microsoft.CodeAnalysis.PooledObjects.projitems*{f738fd65-ffaf-4f52-8efc-5affd1c42846}*SharedItemsImports = 5
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

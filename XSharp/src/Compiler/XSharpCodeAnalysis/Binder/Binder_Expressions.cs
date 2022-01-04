@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
 
         private bool BindVOPointerDereference(CastExpressionSyntax node, TypeWithAnnotations targetType, BoundExpression operand,
-            DiagnosticBag diagnostics, out BoundExpression expression)
+            BindingDiagnosticBag diagnostics, out BoundExpression expression)
         {
             // Type(pPointer) -> Dereference pointer
             // Vulcan only allows this with pPointer is of type PTR (Void pointer)
@@ -55,12 +55,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         var index = new BoundLiteral(node, ConstantValue.Create(0), Compilation.GetSpecialType(SpecialType.System_Int32)) { WasCompilerGenerated = true };
                         var ptrtype = new PointerTypeSymbol(targetType);
-                        HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                        var discardedUseSiteInfo = CompoundUseSiteInfo<AssemblySymbol>.Discarded;
                         //var newConv = Conversions.ClassifyConversionForCast(operand, ptrtype, ref useSiteDiagnostics);
-                        var newConv = Conversions.ClassifyConversionFromExpression(operand, ptrtype, ref useSiteDiagnostics, forCast: true);
+                        var newConv = Conversions.ClassifyConversionFromExpression(operand, ptrtype, ref discardedUseSiteInfo, forCast: true);
                         var ptrconv = new BoundConversion(node, operand, newConv, true, false,
-                            conversionGroupOpt: default,
-                            constantValueOpt: default,
+                            conversionGroupOpt: null,
+                            constantValueOpt: null,
                             type: ptrtype) { WasCompilerGenerated = true };
                         expression = new BoundPointerElementAccess(node, ptrconv, index, false, tType) { WasCompilerGenerated = true };
                         return true;
@@ -72,7 +72,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return false;
         }
 
-        internal BoundExpression Usual2Object(BoundExpression expression, SyntaxNode node, DiagnosticBag diagnostics)
+        internal BoundExpression Usual2Object(BoundExpression expression, SyntaxNode node, BindingDiagnosticBag diagnostics)
         {
             if (expression.Type.IsUsualType())
             {
@@ -84,7 +84,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return expression;
         }
 
-        private BoundExpression SubtractIndex(BoundExpression expr, DiagnosticBag diagnostics, SpecialType specialType)
+        private BoundExpression SubtractIndex(BoundExpression expr, BindingDiagnosticBag diagnostics, SpecialType specialType)
         {
             expr = BindToNaturalType(expr, diagnostics, false);
             var type = expr.Type;
@@ -106,12 +106,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Subtract one from the index
             var right = new BoundLiteral(expr.Syntax, ConstantValue.Create(1), expr.Type) { WasCompilerGenerated = true };
             // when the argument is a literal then we may be able to fold the subtract expression.
-            var resultConstant = FoldBinaryOperator((CSharpSyntaxNode)expr.Syntax, kind, expr, right, expr.Type.SpecialType, diagnostics);
+            var resultConstant = FoldBinaryOperator((CSharpSyntaxNode)expr.Syntax, kind, expr, right, expr.Type, diagnostics);
             var sig = this.Compilation.builtInOperators.GetSignature(kind);
             return new BoundBinaryOperator(expr.Syntax, BinaryOperatorKind.Subtraction,
                 expr, right,
                 resultConstant,
                 sig.Method,
+                sig.ConstrainedToTypeOpt,
                 resultKind: LookupResultKind.Viable,
                 originalUserDefinedOperatorsOpt: ImmutableArray<MethodSymbol>.Empty,
                 type: expr.Type,
@@ -120,7 +121,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         }
 
-        private BoundExpression BindIndexerOrVOArrayAccess(ExpressionSyntax node, BoundExpression expr, AnalyzedArguments analyzedArguments, DiagnosticBag diagnostics)
+        private BoundExpression BindIndexerOrVOArrayAccess(ExpressionSyntax node, BoundExpression expr, AnalyzedArguments analyzedArguments, BindingDiagnosticBag diagnostics)
         {
             if (Compilation.Options.HasRuntime)
             {
@@ -163,31 +164,31 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var arrayBaseType = Compilation.ArrayBaseType();
                 bool numericParams = false;
                 bool mustcast = false;
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+                var discardedUseSiteInfo = CompoundUseSiteInfo<AssemblySymbol>.Discarded;
                 if (!TypeSymbol.Equals(cf , arrayType) && (cf.IsUsualType()
                     || TypeSymbol.Equals(cf.ConstructedFrom , arrayBaseType)
-                    || cf.ImplementsInterface(indexedPropsType, ref useSiteDiagnostics)
-                    || cf.ImplementsInterface(indexerType, ref useSiteDiagnostics)))
+                    || cf.ImplementsInterface(indexedPropsType, ref discardedUseSiteInfo)
+                    || cf.ImplementsInterface(indexerType, ref discardedUseSiteInfo)))
                 {
                     // Index operator on USUAL then we convert the usual to an array or indexer first
 
                     if (Compilation.Options.XSharpRuntime)
                     {
                         if (analyzedArguments.Arguments.Count == 2 && analyzedArguments.Arguments[1].Type.IsStringType()
-                            && cf.ImplementsInterface(namedIndexerType, ref useSiteDiagnostics))
+                            && cf.ImplementsInterface(namedIndexerType, ref discardedUseSiteInfo))
                         {
                             cf = namedIndexerType;
                             numericParams = true;
                             mustcast = true;
                         }
                         else if (analyzedArguments.Arguments.Count == 1 && analyzedArguments.Arguments[0].Type.IsStringType()
-                            && cf.ImplementsInterface(indexedPropsType, ref useSiteDiagnostics))
+                            && cf.ImplementsInterface(indexedPropsType, ref discardedUseSiteInfo))
                         {
                             cf = indexedPropsType;
                             numericParams = false;
                             mustcast = true;
                         }
-                        else if (cf.ImplementsInterface(indexerType, ref useSiteDiagnostics))
+                        else if (cf.ImplementsInterface(indexerType, ref discardedUseSiteInfo))
                         {
                             cf = indexerType;
                             numericParams = true;
@@ -311,7 +312,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             return BindIndexerAccess(node, expr, analyzedArguments, diagnostics);
         }
-        private bool CheckValidRefOmittedArguments(OverloadResolutionResult<MethodSymbol> result, AnalyzedArguments analyzedArguments, DiagnosticBag diagnostics)
+        private bool CheckValidRefOmittedArguments(OverloadResolutionResult<MethodSymbol> result, AnalyzedArguments analyzedArguments, BindingDiagnosticBag diagnostics)
         {
             var member = result.ValidResult.Member;
             for (int i = 0; i < analyzedArguments.Arguments.Count; i++)
@@ -382,7 +383,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return true;
         }
 
-        private bool CheckValidRefOmittedArguments(OverloadResolutionResult<PropertySymbol> result, AnalyzedArguments analyzedArguments, DiagnosticBag diagnostics)
+        private bool CheckValidRefOmittedArguments(OverloadResolutionResult<PropertySymbol> result, AnalyzedArguments analyzedArguments, BindingDiagnosticBag diagnostics)
         {
             for (int i = 0; i < analyzedArguments.Arguments.Count; i++)
             {
@@ -421,7 +422,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             SimpleNameSyntax right,
             bool invoked,
             bool indexed,
-            DiagnosticBag diagnostics
+            BindingDiagnosticBag diagnostics
             )
         {
             if (Compilation.Options.LateBindingOrFox(node) && right.Kind() != SyntaxKind.GenericName && boundLeft.Kind != BoundKind.TypeExpression )
@@ -532,7 +533,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return null;
         }
-        private BoundExpression CheckVOIndexedValue(BoundExpression expr, BindValueKind valueKind, DiagnosticBag diagnostics)
+        private BoundExpression CheckVOIndexedValue(BoundExpression expr, BindValueKind valueKind, BindingDiagnosticBag diagnostics)
         {
             var originalexpr = expr;
             expr = CheckValue(expr, BindValueKind.RValue, diagnostics);
@@ -544,12 +545,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var methodGroup = originalexpr as BoundMethodGroup;
                     if (XSharpString.Equals(methodGroup.Name, "Item"))
                     {
-                        var newDiag = DiagnosticBag.GetInstance();
+                        var newDiag = BindingDiagnosticBag.GetInstance();
                         expr = CheckValue(methodGroup.InstanceOpt, BindValueKind.RValue, newDiag);
                         if (expr.Kind != BoundKind.BadExpression)
                         {
                             newDiag.Clear();
-                            foreach (var error in diagnostics.AsEnumerable())
+                            foreach (var error in diagnostics.DiagnosticBag.AsEnumerable())
                             {
                                 bool suppress = false;
                                 var loc = error.Location;
@@ -571,7 +572,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return expr;
 
         }
-        private bool BindStringToPsz(CSharpSyntaxNode syntax, ref BoundExpression source, TypeSymbol destination,DiagnosticBag diagnostics)
+        private bool BindStringToPsz(CSharpSyntaxNode syntax, ref BoundExpression source, TypeSymbol destination, BindingDiagnosticBag diagnostics)
         {
             NamedTypeSymbol psz = Compilation.PszType();
             if (source.Type is { } && source.Type.IsStringType() &&
@@ -617,7 +618,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             SimpleNameSyntax node,
             bool invoked,
             bool indexed,
-            DiagnosticBag diagnostics,
+            BindingDiagnosticBag diagnostics,
             bool bindMethod,
             bool bindSafe = false
             )
@@ -721,23 +722,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
             var name = node.Identifier.ValueText;
-            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            CompoundUseSiteInfo<AssemblySymbol> useSiteInfo = GetNewCompoundUseSiteInfo(diagnostics);
             var memvarorfield = name.IndexOf("->") > 0;
             // no need to look for our special names
             if (!memvarorfield)
             {
                 if (nsOrTypesFirst)
                 {
-                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteDiagnostics: ref useSiteDiagnostics, options: LookupOptions.NamespacesOrTypesOnly);
+                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteInfo: ref useSiteInfo, options: LookupOptions.NamespacesOrTypesOnly);
                 }
                 if (lookupResult.IsClear)
                 {
-                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteDiagnostics: ref useSiteDiagnostics, options: options);
+                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteInfo: ref useSiteInfo, options: options);
                 }
                 // when no field or local found then try to find defines
                 if (lookupResult.IsClear && !bindMethod)
                 {
-                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteDiagnostics: ref useSiteDiagnostics, options: options | LookupOptions.DefinesOnly);
+                    this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteInfo: ref useSiteInfo, options: options | LookupOptions.DefinesOnly);
                 }
                 if (preferStatic || lookupResult.IsClear)
                 {
@@ -760,12 +761,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         // This uses the 'original' BindIdentifier lookup mechanism
                         options = originalOptions;
-                        useSiteDiagnostics = null;
                         lookupResult.Clear();
-                        this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteDiagnostics: ref useSiteDiagnostics, options: options);
+                        this.LookupSymbolsWithFallback(lookupResult, name, arity: arity, useSiteInfo: ref useSiteInfo, options: options);
                     }
                 }
-                diagnostics.Add(node, useSiteDiagnostics);
+                diagnostics.Add(node, useSiteInfo);
                 if (lookupResult.Kind != LookupResultKind.Empty)
                 {
                     // have we detected an error with the current node?
@@ -785,7 +785,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (symbol == null)
                     {
                         members.Clear();
-                        symbol = GetSymbolOrMethodOrPropertyGroup(lookupResult, node, name, node.Arity, members, diagnostics, out wasError);  // reports diagnostics in result.
+                        symbol = GetSymbolOrMethodOrPropertyGroup(lookupResult, node, name, node.Arity, members, diagnostics, out wasError, null);  // reports diagnostics in result.
                     }
                     else
                     {

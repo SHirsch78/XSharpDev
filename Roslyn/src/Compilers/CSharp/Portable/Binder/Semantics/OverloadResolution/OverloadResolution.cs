@@ -711,7 +711,7 @@ outerDefault:
             var normalResult = IsConstructorApplicableInNormalForm(constructor, arguments, completeResults, ref useSiteInfo);
             var result = normalResult;
 #if XSHARP
-            normalResult = XsAddConstructorToCandidateSet(result, constructor, arguments, completeResults, ref useSiteDiagnostics);
+            normalResult = XsAddConstructorToCandidateSet(result, constructor, arguments, completeResults, ref useSiteInfo);
 #endif
             if (!normalResult.IsValid)
             {
@@ -1800,7 +1800,7 @@ outerDefault:
 
             BetterResult result = BetterResult.Neither;
 #if XSHARP
-            var found = VOBetterFunctionMember(m1, m2, arguments, out result, out useSiteDiagnostics);
+            var found = VOBetterFunctionMember(m1, m2, arguments, out result, ref useSiteInfo);
             if (found)
             {
                 return result;
@@ -2191,7 +2191,7 @@ outerDefault:
             result = PreferValOverInOrRefInterpolatedHandlerParameters(arguments, m1, m1LeastOverriddenParameters, m2, m2LeastOverriddenParameters);
             if (result == BetterResult.Neither)
             {
-                result = PreferMostDerived(m1, m2, ref useSiteDiagnostics);
+                result = PreferMostDerived(m1, m2, ref useSiteInfo);
             }
             return result;
 #else
@@ -3788,7 +3788,7 @@ outerDefault:
 
                     {
                         conversion = XsIsApplicable(candidate, arguments, ref argument, argsToParameters,
-                            argumentPosition, parameters, completeResults, ref argumentRefKind, ref useSiteDiagnostics);
+                            argumentPosition, parameters, completeResults, ref argumentRefKind, ref useSiteInfo);
                     }
                     if (conversion.Kind == ConversionKind.NoConversion)
                     {

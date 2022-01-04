@@ -2,6 +2,7 @@
 #using System.Windows.Forms
 FUNCTION Start() AS VOID
 LOCAL e AS AnchorStyles
+e := AnchorStyles.Left - AnchorStyles.Right
 e := AnchorStyles.Left + AnchorStyles.Right
 ? e
 

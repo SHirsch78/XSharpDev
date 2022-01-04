@@ -132,7 +132,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal static BoundStatement RewriteAppExit(
                  MethodSymbol method,
                  BoundStatement statement,
-                 DiagnosticBag diagnostics)
+                 BindingDiagnosticBag diagnostics)
 
         {
             if (method.Name != XSharpSpecialNames.AppExit)
@@ -217,7 +217,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal static BoundStatement RewriteAppInit(
             MethodSymbol method,
             BoundStatement statement,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
 
         {
             if (method.Name != XSharpSpecialNames.AppInit )
@@ -376,7 +376,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal static BoundStatement RewriteRunInitProc(
             MethodSymbol method,
             BoundStatement statement,
-            DiagnosticBag diagnostics)
+            BindingDiagnosticBag diagnostics)
 
         {
             if ( method.Name != ReservedNames.RunInitProcs)
@@ -396,7 +396,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal static BoundStatement RewriteExit(
                  MethodSymbol method,
                  BoundStatement statement,
-                 DiagnosticBag diagnostics)
+                 BindingDiagnosticBag diagnostics)
 
         {
             return statement;
@@ -455,7 +455,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal static BoundStatement RemoveUnusedVars(
                  XSharpParser.MemberData data,
                  BoundStatement statement,
-                 DiagnosticBag diagnostics)
+                 BindingDiagnosticBag diagnostics)
         {
             bool removeMemvars = data.HasMemVarLevel && !(data.HasMemVars || data.HasUndeclared);
             bool removePCount = data.HasClipperCallingConvention && data.UsesPCount == false;

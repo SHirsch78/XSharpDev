@@ -25,7 +25,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!uniqueUsings.Contains(ns))
             {
                 uniqueUsings.Add(ns);
-                usings.Add(new NamespaceOrTypeAndUsingDirective(ns, usingDirective));
+                usings.Add(new NamespaceOrTypeAndUsingDirective(ns, usingDirective, dependencies: default));
             }
 
         }
@@ -39,8 +39,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var result = LookupResult.GetInstance();
                 LookupOptions options = LookupOptions.AllNamedTypesOnArityZero;
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                usingsBinder.LookupSymbolsSimpleName(result, null, XSharpSpecialNames.FunctionsClass, 0, basesBeingResolved, options, false, useSiteDiagnostics: ref useSiteDiagnostics);
+                var diagnostics = BindingDiagnosticBag.GetInstance();
+                CompoundUseSiteInfo<AssemblySymbol> useSiteInfo = usingsBinder.GetNewCompoundUseSiteInfo(diagnostics);
+                usingsBinder.LookupSymbolsSimpleName(result, null, XSharpSpecialNames.FunctionsClass, 0, basesBeingResolved, options, false, useSiteInfo: ref useSiteInfo);
                 foreach (var sym in result.Symbols)
                 {
                     if (sym.Kind == SymbolKind.NamedType)
@@ -64,7 +65,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (!string.IsNullOrEmpty(functionsClass))
                     {
                         var declbinder = usingsBinder.WithAdditionalFlags(BinderFlags.SuppressConstraintChecks);
-                        var diagnostics = DiagnosticBag.GetInstance();
                         var name = Syntax.InternalSyntax.XSharpTreeTransformationCore.ExtGenerateQualifiedName(functionsClass);
                         var imported = declbinder.BindNamespaceOrTypeSymbol(name, diagnostics, basesBeingResolved);
                         if (imported.NamespaceOrTypeSymbol.Kind == SymbolKind.NamedType)
@@ -79,7 +79,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     !compilation.ImplicitNamespaceType().IsErrorType())
                 {
                     var declbinder = usingsBinder.WithAdditionalFlags(BinderFlags.SuppressConstraintChecks);
-                    var diagnostics = DiagnosticBag.GetInstance();
                     string[] defNs;
                     if (compilation.Options.XSharpRuntime)
                         defNs = new string[]{ OurNameSpaces.XSharp};

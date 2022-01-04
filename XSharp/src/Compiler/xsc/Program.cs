@@ -3,8 +3,10 @@
 // Licensed under the Apache License, Version 2.0.
 // See License.txt in the project root for license information.
 //
+#nullable disable
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using Microsoft.CodeAnalysis.CommandLine;
 
@@ -29,12 +31,13 @@ namespace Microsoft.CodeAnalysis.CSharp.CommandLine
 
         private static int MainCore(string[] args)
         {
+            using var logger = new CompilerServerLogger($"xsc {Process.GetCurrentProcess().Id}");
+
 #if BOOTSTRAP
-            ExitingTraceListener.Install();
+            ExitingTraceListener.Install(logger);
 #endif
 
-            using var logger = new CompilerServerLogger();
-            return BuildClient.Run(args, RequestLanguage.CSharpCompile, Xsc.Run, logger);
+            return BuildClient.Run(args, RequestLanguage.CSharpCompile, Xsc.Run, BuildClient.GetCompileOnServerFunc(logger));
         }
 
         public static int Run(string[] args, string clientDir, string workingDir, string sdkDir, string tempDir, TextWriter textWriter, IAnalyzerAssemblyLoader analyzerLoader)

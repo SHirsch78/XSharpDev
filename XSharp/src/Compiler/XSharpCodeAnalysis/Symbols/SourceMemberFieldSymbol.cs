@@ -56,7 +56,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (xNode is XP.VodefineContext)
             {
                 var vodef = xNode as XP.VodefineContext;
-                DiagnosticBag diagnostics = DiagnosticBag.GetInstance();
+                var diagnostics = BindingDiagnosticBag.GetInstance();
                 // detect recursion
                 if (XSharpString.Equals(vodef.Id.GetText(), currentDefine))
                 {

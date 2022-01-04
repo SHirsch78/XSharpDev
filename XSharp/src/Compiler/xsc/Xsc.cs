@@ -46,9 +46,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CommandLine
             XSharpSpecificCompilationOptions.SetSysDir(paths[2]);
             var responseFile = Path.Combine(buildPaths.ClientDirectory, CSharpCompiler.ResponseFileName);
             var compiler = new Xsc(responseFile, buildPaths, args, analyzerLoader);
-            var result = ConsoleUtil.RunWithUtf8Output(compiler.Arguments.Utf8Output, textWriter, tw => compiler.Run(tw));
-
-            return result;
+            return ConsoleUtil.RunWithUtf8Output(compiler.Arguments.Utf8Output, textWriter, tw => compiler.Run(tw));
         }
 
     }

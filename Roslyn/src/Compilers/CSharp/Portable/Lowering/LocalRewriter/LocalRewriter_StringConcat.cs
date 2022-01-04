@@ -535,9 +535,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
             bool alreadyReported = false;
-            if (_factory.Diagnostics.HasAnyErrors())
+            if (_factory.Diagnostics.HasAnyErrors() && _factory.Diagnostics.DiagnosticBag != null)
             {
-                foreach (var error in _factory.Diagnostics.AsEnumerable())
+                foreach (var error in _factory.Diagnostics.DiagnosticBag.AsEnumerable())
                 {
                     if (error.Location == location)
                     {

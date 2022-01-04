@@ -19,7 +19,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
 
         private MemberAnalysisResult XsAddConstructorToCandidateSet(MemberAnalysisResult result, MethodSymbol constructor,
-            AnalyzedArguments arguments, bool completeResults, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            AnalyzedArguments arguments, bool completeResults, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             if (result.IsValid && IsValidParams(constructor) && Compilation.Options.HasRuntime)
             {
@@ -45,7 +45,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         if (!constructor.HasUseSiteError)
                         {
-                            var expandedResult = IsConstructorApplicableInExpandedForm(constructor, arguments, completeResults, ref useSiteDiagnostics);
+                            var expandedResult = IsConstructorApplicableInExpandedForm(constructor, arguments, completeResults, ref useSiteInfo);
                             if (expandedResult.IsValid || completeResults)
                             {
                                 result = expandedResult;
@@ -59,7 +59,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private Conversion XsIsApplicable( Symbol candidate, AnalyzedArguments arguments, ref BoundExpression argument,
             ImmutableArray<int> argsToParameters, int argumentPosition, EffectiveParameters parameters, bool completeResults,
-            ref RefKind argumentRefKind, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            ref RefKind argumentRefKind, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             RefKind parameterRefKind = parameters.ParameterRefKinds.IsDefault ? RefKind.None : parameters.ParameterRefKinds[argumentPosition];
             bool literalNullForRefParameter = false;
@@ -121,11 +121,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // pass variable with REF to function/method that expects OUT (Vulcan did not have OUT)
                 argumentRefKind = parameterRefKind;
                 arguments.SetRefKind(argumentPosition, argumentRefKind);
-                useSiteDiagnostics = new HashSet<DiagnosticInfo>();
                 var info = new CSDiagnosticInfo(ErrorCode.WRN_ArgumentRefParameterOut,
                                                 new object[] { argumentPosition + 1, parameterRefKind.ToParameterDisplayString() });
-                useSiteDiagnostics = new HashSet<DiagnosticInfo>();
-                useSiteDiagnostics.Add(info);
+                var diags = ArrayBuilder<DiagnosticInfo>.GetInstance();
+                diags.Add(info);
+                useSiteInfo.AddDiagnostics(diags.ToImmutableAndFree());
             }
             if (parameterRefKind.IsByRef() && argumentRefKind == RefKind.None)
             {
@@ -133,11 +133,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 arguments.SetRefKind(argumentPosition, argumentRefKind);
                 if (!implicitCastsAndConversions)
                 {
-                    useSiteDiagnostics = new HashSet<DiagnosticInfo>();
                     var info = new CSDiagnosticInfo(ErrorCode.ERR_BadArgExtraRef,
                                                     new object[] { argumentPosition + 1, argumentRefKind.ToParameterDisplayString() });
-                    useSiteDiagnostics = new HashSet<DiagnosticInfo>();
-                    useSiteDiagnostics.Add(info);
+                    var list = new List<CSDiagnosticInfo>() { info };
+                    useSiteInfo.AddDiagnostics(list.AsReadOnly());
                 }
             }
 
@@ -155,7 +154,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return conversion;
         }
 
-        private static BetterResult PreferMostDerived<TMember>(MemberResolutionResult<TMember> m1, MemberResolutionResult<TMember> m2, ref HashSet<DiagnosticInfo> useSiteDiagnostics) where TMember : Symbol
+        private static BetterResult PreferMostDerived<TMember>(MemberResolutionResult<TMember> m1, MemberResolutionResult<TMember> m2, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo) where TMember : Symbol
         {
             var t1 = m1.Member.ContainingType;
             var t2 = m2.Member.ContainingType;
@@ -167,16 +166,16 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (t1.IsInterfaceType() && t2.IsInterfaceType())
             {
-                if (t1.AllInterfacesWithDefinitionUseSiteDiagnostics(ref useSiteDiagnostics).Contains((NamedTypeSymbol)t2))
+                if (t1.AllInterfacesWithDefinitionUseSiteDiagnostics(ref useSiteInfo).Contains((NamedTypeSymbol)t2))
                     return BetterResult.Left;
-                if (t2.AllInterfacesWithDefinitionUseSiteDiagnostics(ref useSiteDiagnostics).Contains((NamedTypeSymbol)t1))
+                if (t2.AllInterfacesWithDefinitionUseSiteDiagnostics(ref useSiteInfo).Contains((NamedTypeSymbol)t1))
                     return BetterResult.Right;
             }
             else if (t1.IsClassType() && t2.IsClassType())
             {
-                if (t1.IsDerivedFrom(t2, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref useSiteDiagnostics))
+                if (t1.IsDerivedFrom(t2, TypeCompareKind.ConsiderEverything, useSiteInfo: ref useSiteInfo))
                     return BetterResult.Left;
-                if (t2.IsDerivedFrom(t1, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref useSiteDiagnostics))
+                if (t2.IsDerivedFrom(t1, TypeCompareKind.ConsiderEverything, useSiteInfo: ref useSiteInfo))
                     return BetterResult.Right;
             }
 
@@ -218,21 +217,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="m2"></param>
         /// <param name="arguments"></param>
         /// <param name="result"></param>
-        /// <param name="useSiteDiagnostics"></param>
+        /// <param name="useSiteInfo"></param>
         /// <returns></returns>
         private bool VOBetterFunctionMember<TMember>(
             MemberResolutionResult<TMember> m1,
             MemberResolutionResult<TMember> m2,
             ArrayBuilder<BoundExpression> arguments,
             out BetterResult result,
-            out HashSet<DiagnosticInfo> useSiteDiagnostics
-            )
+            ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
             where TMember : Symbol
         {
             result = BetterResult.Neither;
             bool Ambiguous = false;
             // Prefer the member not declared in VulcanRT, if applicable
-            useSiteDiagnostics = null;
             if (Compilation.Options.HasRuntime)
             {
                 var asm1 = m1.Member.ContainingAssembly;
@@ -579,9 +576,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                             }
 
                             var info = GenerateAmbiguousWarning(r1, r2);
-
-                            useSiteDiagnostics = new HashSet<DiagnosticInfo>();
-                            useSiteDiagnostics.Add(info);
+                            var diags = ArrayBuilder<DiagnosticInfo>.GetInstance();
+                            diags.Add(info);
+                            useSiteInfo.AddDiagnostics(diags.ToImmutableAndFree());
                             return true;
                         }
                     }
@@ -595,17 +592,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 result = BetterResult.Left;
                 var info = GenerateFuncMethodWarning(m1.Member, m2.Member);
+                var diags = ArrayBuilder<DiagnosticInfo>.GetInstance();
+                diags.Add(info);
+                useSiteInfo.AddDiagnostics(diags.ToImmutableAndFree());
 
-                useSiteDiagnostics = new HashSet<DiagnosticInfo>();
-                useSiteDiagnostics.Add(info);
                 return true;
             }
             else if (func2 && !func1)
             {
                 result = BetterResult.Right;
                 var info = GenerateFuncMethodWarning(m2.Member, m1.Member);
-                useSiteDiagnostics = new HashSet<DiagnosticInfo>();
-                useSiteDiagnostics.Add(info);
+                var diags = ArrayBuilder<DiagnosticInfo>.GetInstance();
+                diags.Add(info);
+                useSiteInfo.AddDiagnostics(diags.ToImmutableAndFree());
                 return true;
             }
             return false;
@@ -637,7 +636,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         }
 
-        private BetterResult VoBetterOperator(BinaryOperatorSignature op1, BinaryOperatorSignature op2, BoundExpression left, BoundExpression right, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        private BetterResult VoBetterOperator(BinaryOperatorSignature op1, BinaryOperatorSignature op2, BoundExpression left, BoundExpression right, ref CompoundUseSiteInfo<AssemblySymbol> useSiteInfo)
         {
             // When the binary operators are equal we inspect the types
             if ((op1.Kind & BinaryOperatorKind.OpMask) == (op2.Kind & BinaryOperatorKind.OpMask))

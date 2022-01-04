@@ -31,7 +31,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             LogicCompare
         }
 
-        private bool XsHasImplicitCast(BoundExpression expression, TypeSymbol targetType, DiagnosticBag diagnostics)
+        private bool XsHasImplicitCast(BoundExpression expression, TypeSymbol targetType, BindingDiagnosticBag diagnostics)
         {
             var sourceType = expression.Type;
             var syntax = expression.Syntax;
@@ -72,7 +72,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return false;
         }
-        private BoundExpression BindVOCompareString(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOCompareString(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             BoundExpression left, BoundExpression right)
         {
             MethodSymbol opMeth;
@@ -112,7 +112,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 opCall.WasCompilerGenerated = true;
             }
             var op = BindSimpleBinaryOperator(node, diagnostics, opCall,
-                new BoundLiteral(node, ConstantValue.Create(0), GetSpecialType(SpecialType.System_Int32, diagnostics, node)));
+                new BoundLiteral(node, ConstantValue.Create(0), GetSpecialType(SpecialType.System_Int32, diagnostics, node)),
+                leaveUnconvertedIfInterpolatedString: false);
             op.WasCompilerGenerated = true;
             var res = CreateConversion(op, Compilation.GetSpecialType(SpecialType.System_Boolean), diagnostics);
             res.WasCompilerGenerated = true;
@@ -120,7 +121,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
 
-        private BoundExpression BindVOSingleEqualsString(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOSingleEqualsString(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             BoundExpression left, BoundExpression right)
         {
             MethodSymbol opMeth = null;
@@ -152,7 +153,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return opCall;
         }
 
-        private BoundExpression BindVOUsualOther(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOUsualOther(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             BoundExpression left, BoundExpression right)
         {
             var usualType = Compilation.UsualType();
@@ -208,7 +209,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return false;
         }
-        private BoundExpression BindVOPszCompare(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOPszCompare(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
                 ref BoundExpression left, ref BoundExpression right)
         {
             var pszType = Compilation.PszType();
@@ -236,7 +237,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return null;
         }
-        private BoundExpression BindVOSymbolCompare(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOSymbolCompare(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
                 ref BoundExpression left, ref BoundExpression right)
         {
             var symType = Compilation.SymbolType();
@@ -251,7 +252,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        private BoundExpression BindVOLogicCompare(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOLogicCompare(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
                 ref BoundExpression left, ref BoundExpression right)
         {
             // Convert logic compare to integer compare where TRUE = 1 and FALSE = 0
@@ -263,7 +264,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        private BoundExpression BindVOSingleEqualsUsual(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOSingleEqualsUsual(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
              BoundExpression left, BoundExpression right)
         {
             MethodSymbol opMeth = null;
@@ -307,7 +308,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return opCall;
         }
 
-        private BoundExpression BindVONotEqualsUsual(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVONotEqualsUsual(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             BoundExpression left, BoundExpression right)
         {
             MethodSymbol opMeth = null;
@@ -350,7 +351,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return opCall;
         }
 
-        private BoundExpression BindVOSubtractString(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOSubtractString(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             BoundExpression left, BoundExpression right)
         {
             MethodSymbol opMeth = null;
@@ -379,7 +380,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return opCall;
         }
 
-        private BoundExpression BindVOBinaryOperator(BinaryExpressionSyntax node, DiagnosticBag diagnostics,
+        private BoundExpression BindVOBinaryOperator(BinaryExpressionSyntax node, BindingDiagnosticBag diagnostics,
             ref BoundExpression left, ref BoundExpression right, VOOperatorType opType)
         {
             Debug.Assert(opType != VOOperatorType.None);
@@ -413,7 +414,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private VOOperatorType NeedsVOOperator(BinaryExpressionSyntax node, ref BoundExpression left,
-            ref BoundExpression right, DiagnosticBag diagnostics)
+            ref BoundExpression right, BindingDiagnosticBag diagnostics)
         {
             // Check if a special XSharp binary operation is needed. This is needed when:
             //
@@ -667,7 +668,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return opType;
         }
-        private void AdjustVOUsualLogicOperands(BinaryExpressionSyntax node, ref BoundExpression left, ref BoundExpression right, DiagnosticBag diagnostics)
+        private void AdjustVOUsualLogicOperands(BinaryExpressionSyntax node, ref BoundExpression left, ref BoundExpression right, BindingDiagnosticBag diagnostics)
         {
             if (!Compilation.Options.HasRuntime)
                 return;
@@ -713,7 +714,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return;
         }
-        public BoundExpression RewriteIndexAccess(BoundExpression index, DiagnosticBag diagnostics)
+        public BoundExpression RewriteIndexAccess(BoundExpression index, BindingDiagnosticBag diagnostics)
         {
             var syntax = (CSharpSyntaxNode)index.Syntax;
             if (!index.HasAnyErrors && !this.Compilation.Options.HasOption(CompilerOption.ArrayZero, syntax))
@@ -729,9 +730,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     SpecialType.System_UInt32 => BinaryOperatorKind.UIntSubtraction,
                     _ => BinaryOperatorKind.ULongSubtraction
                 };
-                var resultConstant = FoldBinaryOperator(syntax, opKind, left, right, left.Type.SpecialType, diagnostics);
+                var resultConstant = FoldBinaryOperator(syntax, opKind, left, right, left.Type, diagnostics);
                 var sig = this.Compilation.builtInOperators.GetSignature(opKind);
-                index = new BoundBinaryOperator(syntax, kind, left, right, resultConstant, sig.Method,
+                index = new BoundBinaryOperator(syntax, kind, left, right, resultConstant, sig.Method, sig.ConstrainedToTypeOpt,
                     resultKind: LookupResultKind.Viable,
                     originalUserDefinedOperatorsOpt: ImmutableArray<MethodSymbol>.Empty,
                     type: index.Type,
@@ -802,7 +803,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return expr.Type;
         }
 
-        public BoundExpression BindXsAddressOfExpression(PrefixUnaryExpressionSyntax node, DiagnosticBag diagnostics)
+        public BoundExpression BindXsAddressOfExpression(PrefixUnaryExpressionSyntax node, BindingDiagnosticBag diagnostics)
         {
             // In vulcan when we have defined a structure like:
             // VOSTRUCT _WINWIN32_FIND_DATA
@@ -878,7 +879,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // when the local is declared with DIM then there is also a fixed pointer
                         // LOCAL DIM abTemp[100]   AS BYTE
                         // then we translate @abTemp[1] to abTemp$dim
-                        var dimlocal = FindDimLocal((BoundLocal)bac.Expression);
+                        var dimlocal = FindDimLocal((BoundLocal)bac.Expression, diagnostics);
                         if (dimlocal != null)
                         {
                             if (bac.Indices.Length == 1)
@@ -892,7 +893,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         return local;
                                     }
                                 }
-                                return new BoundBinaryOperator(bac.Syntax, BinaryOperatorKind.IntAddition, local, index, null, null,
+                                return new BoundBinaryOperator(bac.Syntax, BinaryOperatorKind.IntAddition, local, index, null, null, null, 
                                     LookupResultKind.Viable, default, dimlocal.Type);
                             }
                         }
@@ -917,7 +918,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // LOCAL DIM abTemp[100]   AS BYTE
                 // then we translate @abTemp to abTemp$dim
                 var local = (BoundLocal)expr;
-                var dimlocal = FindDimLocal(local);
+                var dimlocal = FindDimLocal(local, diagnostics);
                 if (dimlocal != null)
                 {
                     return new BoundLocal(expr.Syntax, dimlocal, null, dimlocal.Type);
@@ -950,7 +951,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return null;
         }
-        private BoundExpression AdjustConstantType(BoundExpression expr, TypeSymbol type, DiagnosticBag diagnostics)
+        private BoundExpression AdjustConstantType(BoundExpression expr, TypeSymbol type, BindingDiagnosticBag diagnostics)
         {
             if (expr.Kind == BoundKind.Literal && xsValueFitsIn(expr.ConstantValue, type.SpecialType))
             {
@@ -958,7 +959,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return expr;
         }
-        public void VODetermineIIFTypes(ConditionalExpressionSyntax node, DiagnosticBag diagnostics,
+        public void VODetermineIIFTypes(ConditionalExpressionSyntax node, BindingDiagnosticBag diagnostics,
             ref BoundExpression trueExpr, ref BoundExpression falseExpr)
         {
             if (trueExpr.Type is null || falseExpr.Type is null)
@@ -1055,7 +1056,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private LocalSymbol FindDimLocal(BoundLocal local)
+        private LocalSymbol FindDimLocal(BoundLocal local, BindingDiagnosticBag diagnostics)
         {
             var decl = local.LocalSymbol.DeclaringSyntaxReferences[0];
             if (decl is not null && decl.GetSyntax() is CSharpSyntaxNode csnode && csnode.XVoIsDim && this is not FixedStatementBinder)
@@ -1063,8 +1064,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 var dimName = local.LocalSymbol.Name + XSharpSpecialNames.DimSuffix;
                 LookupResult result = LookupResult.GetInstance();
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                var binder = this.LookupSymbolsInternal(result, dimName, 0, null, LookupOptions.Default, false, ref useSiteDiagnostics);
+                var useSiteInfo = this.GetNewCompoundUseSiteInfo(diagnostics);
+                var binder = this.LookupSymbolsInternal(result, dimName, 0, null, LookupOptions.Default, false, ref useSiteInfo);
                 var symbol = result.SingleSymbolOrDefault;
                 return symbol as LocalSymbol;
             }

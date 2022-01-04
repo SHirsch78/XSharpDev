@@ -15,7 +15,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal partial class Binder
     {
-        private BoundExpression BindCodeblock(SyntaxNode syntax, UnboundLambda unboundLambda, Conversion conversion, bool isCast, TypeSymbol destination, DiagnosticBag diagnostics)
+        private BoundExpression BindCodeblock(SyntaxNode syntax, UnboundLambda unboundLambda, Conversion conversion, bool isCast, TypeSymbol destination, BindingDiagnosticBag diagnostics)
         {
             if (!Compilation.Options.HasRuntime)
                 return null;
@@ -30,9 +30,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             Conversion conv = Conversion.ImplicitReference;
             if (destination.IsCodeblockType() && !destination.IsObjectType())
             {
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                conv = Conversions.ClassifyConversionFromType(Compilation.CodeBlockType(), destination, ref useSiteDiagnostics);
-                diagnostics.Add(syntax, useSiteDiagnostics);
+                var useSiteInfo = GetNewCompoundUseSiteInfo(diagnostics);
+                conv = Conversions.ClassifyConversionFromType(Compilation.CodeBlockType(), destination, ref useSiteInfo);
             }
             if (Compilation.Options.HasRuntime)
             {
@@ -58,7 +57,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Create the delegate for the Lambda Property
             NamedTypeSymbol cbType = manager.ConstructCodeblockTypeSymbol(delegateSignature, syntax.Location);
             var delType = manager.GetCodeblockDelegateType(cbType);
-            var _boundLambda = unboundLambda.Bind(delType);
+            var _boundLambda = unboundLambda.Bind(delType, false);
             diagnostics.AddRange(_boundLambda.Diagnostics);
             var cbDel = new BoundConversion(
                 syntax,
@@ -118,7 +117,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 type: destination)
             { WasCompilerGenerated = unboundLambda.WasCompilerGenerated };
         }
-        internal static BoundBlock FixCodeBlockProblems(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, BoundBlock block, DiagnosticBag diagnostics)
+        internal static BoundBlock FixCodeBlockProblems(LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, BoundBlock block, BindingDiagnosticBag diagnostics)
         {
             // check for a Lambda that returns a USUAL
             if (lambdaSymbol.ReturnType.IsNotUsualType())
@@ -152,7 +151,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var operand = boundConv.Operand;
                         if (boundConv.Type.IsUsualType() && operand.Type.SpecialType == SpecialType.System_Void)
                         {
-                            var errors = diagnostics.ToReadOnly();
+                            var errors = diagnostics.DiagnosticBag.ToReadOnlyAndFree();
                             diagnostics.Clear();
                             foreach (var error in errors)
                             {

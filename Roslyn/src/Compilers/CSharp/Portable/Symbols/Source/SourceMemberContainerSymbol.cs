@@ -1439,7 +1439,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 Dictionary<string, ImmutableArray<Symbol>> membersByName;
 #if XSHARP
-                var membersByName = membersAndInitializers.NonTypeNonIndexerMembers.ToDictionary(s => s.Name, XSharpString.Comparer);
+                membersByName = membersAndInitializers.NonTypeMembers.ToDictionary(s => s.Name, XSharpString.Comparer);
 #else
                 if (!membersAndInitializers.HaveIndexers)
                 {
@@ -2523,7 +2523,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 #if XSHARP
             if ((this as SourceNamedTypeSymbol)?.IsSourceVoStructOrUnion == true && DeclaringCompilation.Options.HasRuntime)
             {
-                foreach (var m in membersAndInitializers.NonTypeNonIndexerMembers)
+                foreach (var m in membersAndInitializers.NonTypeMembers)
                 {
                     if (m.Kind == SymbolKind.Field)
                     {
@@ -2564,7 +2564,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
 
 #if XSHARP
-            var membersByName = merged.ToDictionary(s => s.Name, XSharpString.Comparer);
+            //membersByName = merged.ToDictionary(s => s.Name, XSharpString.Comparer);
+            MergePartialMembers(ref membersByName, diagnostics);
 #else
             MergePartialMembers(ref membersByName, diagnostics);
 

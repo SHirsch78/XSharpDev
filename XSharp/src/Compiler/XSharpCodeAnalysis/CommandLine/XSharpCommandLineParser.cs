@@ -32,7 +32,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 options = new XSharpSpecificCompilationOptions();
             }
-
+            if (name.StartsWith("/") || name.StartsWith("-"))
+                name = name.Substring(1);
             bool handled = true;
             bool positive = !name.EndsWith("-");
             bool encode = false;

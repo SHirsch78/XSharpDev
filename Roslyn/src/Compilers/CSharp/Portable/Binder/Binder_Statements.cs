@@ -1068,7 +1068,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     initializerOpt = BindPossibleArrayInitializer(
                         SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal("")), 
-                        declTypeOpt.Type, valueKind, new DiagnosticBag());
+                        declTypeOpt.Type, valueKind, BindingDiagnosticBag.GetInstance());
                     initializerOpt.WasCompilerGenerated = true;
                 }
 #endif

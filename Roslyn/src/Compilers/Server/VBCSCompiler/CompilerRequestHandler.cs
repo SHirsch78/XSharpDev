@@ -92,6 +92,7 @@ namespace Microsoft.CodeAnalysis.CompilerServer
                         analyzerLoader: AnalyzerAssemblyLoader,
                         _driverCache);
                     return true;
+#if !XSHARPPRE && ! XSHARP
                 case LanguageNames.VisualBasic:
                     compiler = new VisualBasicCompilerServer(
                         AssemblyReferenceProvider,
@@ -101,6 +102,7 @@ namespace Microsoft.CodeAnalysis.CompilerServer
                         analyzerLoader: AnalyzerAssemblyLoader,
                         _driverCache);
                     return true;
+#endif
                 default:
                     compiler = null;
                     return false;

@@ -596,14 +596,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                     break;
                 case BinaryOperatorKind.UnderlyingAndEnumSubtraction:
                 case BinaryOperatorKind.UnderlyingAndEnumAddition:
-#if XSHARP
+//#if XSHARP
                 case BinaryOperatorKind.And | BinaryOperatorKind.UnderlyingAndEnum:
                 case BinaryOperatorKind.Or | BinaryOperatorKind.UnderlyingAndEnum:
                 case BinaryOperatorKind.Xor | BinaryOperatorKind.UnderlyingAndEnum:
                 case BinaryOperatorKind.And | BinaryOperatorKind.Lifted | BinaryOperatorKind.UnderlyingAndEnum:
                 case BinaryOperatorKind.Or | BinaryOperatorKind.Lifted | BinaryOperatorKind.UnderlyingAndEnum:
                 case BinaryOperatorKind.Xor | BinaryOperatorKind.Lifted | BinaryOperatorKind.UnderlyingAndEnum:
-#endif
+//#endif
                     enumType = expression.Right.Type;
                     break;
                 default:

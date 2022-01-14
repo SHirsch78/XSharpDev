@@ -38,6 +38,8 @@ RecentReference = GAC:XSharp.Rdd,v4,2.6.0.0
 RecentReference = GAC:VOWin32APILibrary,v4,2.6.0.0
 RecentReference = Browse:C:\XSharp\DevRt\Binaries\Debug\XSharp.Rdd.dll
 RecentReference = Browse:C:\XSharp\DevRt\Binaries\Debug\VOWin32APILibrary.dll
+RecentReference = Browse:C:\XSharp\DevRt\Binaries\Release\XSharp.Core.dll
+RecentReference = Browse:C:\XSharp\DevRt\Binaries\Release\XSharp.RT.dll
 
 [Application Groups]
 ApplicationGroup = BUGS,E440B545-3C18-4457-A54F-4F3256349ABE,7A4D68CC-1F6B-46FA-B99B-A8CD8EA65C11
@@ -98949,8 +98951,8 @@ FileType = Code
 CopyToBin = 0
 [R800 - Incorrect line numbers for Error References]
 ReferenceGAC = CLR4,System,1,0,4.0.0.0
-ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.Core.dll,1,1
-ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.RT.dll,1,1
+ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.Core.dll,1,0
+ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.RT.dll,1,0
 [R800 - Incorrect line numbers for Error Resources]
 [R800 - Incorrect line numbers for Error Native Resources]
 [R800 - Incorrect line numbers for Error License files]
@@ -99283,8 +99285,8 @@ FileType = Code
 CopyToBin = 0
 [R803 - REF or OUT variables and missing arguments References]
 ReferenceGAC = CLR4,System,1,0,4.0.0.0
-ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.Core.dll,1,1
-ReferenceBrowse = C:\XSharp\DevRt\Binaries\Debug\XSharp.RT.dll,1,1
+ReferenceBrowse = C:\XSharp\DevRt\Binaries\Release\XSharp.Core.dll,1,1
+ReferenceBrowse = C:\XSharp\DevRt\Binaries\Release\XSharp.RT.dll,1,1
 [R803 - REF or OUT variables and missing arguments Resources]
 [R803 - REF or OUT variables and missing arguments Native Resources]
 [R803 - REF or OUT variables and missing arguments License files]

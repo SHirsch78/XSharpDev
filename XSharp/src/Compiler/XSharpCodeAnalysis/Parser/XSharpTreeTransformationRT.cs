@@ -202,7 +202,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         #endregion
 
         #region SyntaxTree
-        private SyntaxTree GenerateDefaultSyntaxTree(List<Tuple<int, String>> initprocs, bool isApp, bool hasPCall, List<MemVarFieldInfo> filewidepublics)
+        private SyntaxTree GenerateDefaultSyntaxTree(List<Tuple<int, string>> initprocs, bool isApp, bool hasPCall,
+            List<MemVarFieldInfo> filewidepublics, CSharpCompilation compilation)
         {
 
             // Create Global Functions class with the Members to call the Init procedures
@@ -244,6 +245,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             GlobalEntities.Attributes.Add(attrlist);
             _pool.Free(arguments);
             _pool.Free(attributes);
+
+            AddGlobalUsings(compilation, GlobalEntities.Usings);
+
             var eof = SyntaxFactory.Token(SyntaxKind.EndOfFileToken);
             var cu = _syntaxFactory.CompilationUnit(
                     GlobalEntities.Externs,
@@ -254,7 +258,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var red = (Syntax.CompilationUnitSyntax)cu.CreateRed();
             return CSharpSyntaxTree.Create(red);
         }
-        public static SyntaxTree DefaultRTSyntaxTree(IEnumerable<SyntaxTree> trees, bool isApp)
+        public static SyntaxTree DefaultRTSyntaxTree(CSharpCompilation compilation, IEnumerable<SyntaxTree> trees, bool isApp)
         {
             // Trees is NEVER empty !
             CSharpParseOptions options = (CSharpParseOptions)trees.First().Options;
@@ -284,7 +288,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
 
             var t = getTransform(options);
-            return t.GenerateDefaultSyntaxTree(initprocs, isApp, hasPCall, filewidepublics);
+            return t.GenerateDefaultSyntaxTree(initprocs, isApp, hasPCall, filewidepublics, compilation);
         }
 
         public static string VOGlobalClassName(CSharpParseOptions options)

@@ -178,6 +178,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         protected TypeSyntax voidType;
         protected TypeSyntax objectType;
 
+        internal ContextAwareSyntax SF => _syntaxFactory;
+
         static readonly object oGate = new();
         #endregion
 
@@ -241,6 +243,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public XSharpTreeTransformationCore(XSharpParser parser, CSharpParseOptions options, SyntaxListPool pool,
             ContextAwareSyntax syntaxFactory, string fileName)
         {
+
             _pool = pool;
             _syntaxFactory = syntaxFactory;
             _parser = parser;
@@ -267,16 +270,141 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             PragmaWarnings = new List<PragmaWarningDirectiveTriviaSyntax>();
         }
 
-        public static SyntaxTree DefaultXSharpSyntaxTree(IEnumerable<SyntaxTree> trees, bool isApp, XSharpTargetDLL targetDLL)
+        public void AddGlobalUsings(CSharpCompilation compilation, SyntaxListBuilder<UsingDirectiveSyntax> usings)
         {
-            // trees is NOT used here, but it IS used in the VOTreeTransForm
-            var opt = CSharpParseOptions.Default;
-            XSharpSpecificCompilationOptions xopt = new XSharpSpecificCompilationOptions();
-            xopt.TargetDLL = targetDLL;
-            opt = opt.WithXSharpSpecificOptions(xopt);
-            var t = new XSharpTreeTransformationCore(null, opt, new SyntaxListPool(), new ContextAwareSyntax(new SyntaxFactoryContext()), "");
+            // The usingDirective name contains spaces when it is nested and the GlobalClassName not , so we must eliminate them here
+            // nvk: usingDirective.Name.ToString() ONLY has spaces if it is nested. This is not supposed to be nested, as it is "Functions" even for the non-core dialects !!!
+            var uniquens = new List<string>();
+            var uniquestaticns = new List<string>();
+            if (_options.CommandLineArguments != null)
+            {
+                string functionsClass;
+                if (compilation.Options.HasRuntime)
+                {
+                    functionsClass = XSharpTreeTransformationRT.VOGlobalClassName(_options);
+                }
+                else
+                {
+                    functionsClass = GlobalFunctionClassName(compilation.Options.TargetDLL);
+                }
+                if (!string.IsNullOrEmpty(functionsClass) && !uniquestaticns.Contains(functionsClass))
+                {
+                    uniquestaticns.Add(functionsClass);
+                    var usingdirective = _syntaxFactory.UsingDirective(
+                        SyntaxFactory.MakeToken(SyntaxKind.GlobalKeyword),
+                        SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                        SyntaxFactory.MakeToken(SyntaxKind.StaticKeyword),
+                        alias: null,
+                        GenerateQualifiedName(functionsClass),
+                        SyntaxFactory.MakeToken(SyntaxKind.SemicolonToken));
+                    usingdirective.XGenerated = true;
+                    usings.Add(usingdirective);
+                }
+                if (compilation.Options.RuntimeAssemblies != RuntimeAssemblies.None)
+                {
+                    string[] defNs;
+                    if (compilation.Options.XSharpRuntime)
+                        defNs = new string[] { OurNameSpaces.XSharp };
+                    else
+                        defNs = new string[] { OurNameSpaces.Vulcan };
+                    foreach (var name in defNs)
+                    {
+                        if (!uniquens.Contains(name))
+                        {
+                            uniquens.Add(name);
+                            var usingdirective = _syntaxFactory.UsingDirective(
+                                SyntaxFactory.MakeToken(SyntaxKind.GlobalKeyword),
+                                SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                                staticKeyword: null,
+                                alias: null,
+                                GenerateQualifiedName(name),
+                                SyntaxFactory.MakeToken(SyntaxKind.SemicolonToken));
+                            usingdirective.XGenerated = true;
+                            usings.Add(usingdirective);
+                        }
+                    }
+                }
+                var vcla = compilation.ClassLibraryType();
+                var vins = compilation.ImplicitNamespaceType();
+                var refMan = compilation.GetBoundReferenceManager();
+                foreach (var r in refMan.ReferencedAssemblies)
+                {
+                    foreach (var attr in r.GetAttributes())
+                    {
+                        // Check for ImplicitNameSpace attribute
+                        if (Equals(attr.AttributeClass.ConstructedFrom, vins) && compilation.Options.ImplicitNameSpace)
+                        {
+                            var args = attr.CommonConstructorArguments;
+                            if (args != null && args.Length == 1)
+                            {
+                                // only one argument, must be default namespace
+                                var defaultNamespace = args[0].Value?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(defaultNamespace) && ! uniquens.Contains(defaultNamespace))
+                                {
+                                    uniquens.Add(defaultNamespace);
+                                    var usingdirective = _syntaxFactory.UsingDirective(
+                                        SyntaxFactory.MakeToken(SyntaxKind.GlobalKeyword),
+                                        SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                                        staticKeyword: null,
+                                        alias: null,
+                                        GenerateQualifiedName(defaultNamespace),
+                                        SyntaxFactory.MakeToken(SyntaxKind.SemicolonToken));
+                                    usingdirective.XGenerated = true;
+                                    usings.Add(usingdirective);
+                                }
+                            }
+                        }
+                        // Check for Classlibrary attribute
+                        else if (Equals(attr.AttributeClass.ConstructedFrom, vcla))
+                        {
+                            var args = attr.CommonConstructorArguments;
+                            if (args != null && args.Length == 2)
+                            {
+                                // first element is the Functions class
+                                var globalClassName = args[0].Value?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(globalClassName) && !uniquestaticns.Contains(globalClassName))
+                                {
+                                    uniquestaticns.Add(globalClassName);
+                                    var usingdirective = _syntaxFactory.UsingDirective(
+                                        SyntaxFactory.MakeToken(SyntaxKind.GlobalKeyword),
+                                        SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                                        SyntaxFactory.MakeToken(SyntaxKind.StaticKeyword),
+                                        alias: null,
+                                        GenerateQualifiedName(globalClassName),
+                                        SyntaxFactory.MakeToken(SyntaxKind.SemicolonToken));
+                                    usingdirective.XGenerated = true;
+                                    usings.Add(usingdirective);
+                                }
+                                // second element is the default namespace
+                                var defaultNamespace = args[1].Value?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(defaultNamespace) && compilation.Options.ImplicitNameSpace 
+                                    && !uniquens.Contains(defaultNamespace))
+                                {
+                                    var usingdirective = _syntaxFactory.UsingDirective(
+                                        SyntaxFactory.MakeToken(SyntaxKind.GlobalKeyword),
+                                        SyntaxFactory.MakeToken(SyntaxKind.UsingKeyword),
+                                        staticKeyword: null,
+                                        alias: null,
+                                        GenerateQualifiedName(defaultNamespace),
+                                        SyntaxFactory.MakeToken(SyntaxKind.SemicolonToken));
+                                    usingdirective.XGenerated = true;
+                                    usings.Add(usingdirective);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public static SyntaxTree DefaultXSharpSyntaxTree(CSharpCompilation compilation, IEnumerable<SyntaxTree> trees, 
+            bool isApp)
+        {
+            // Trees is NEVER empty !
+            CSharpParseOptions options = (CSharpParseOptions)trees.First().Options;
+            var t = new XSharpTreeTransformationCore(null, options, new SyntaxListPool(), new ContextAwareSyntax(new SyntaxFactoryContext()), "");
+            string globalClassName = t.GetGlobalClassName(options.TargetDLL);
 
-            string globalClassName = t.GetGlobalClassName(targetDLL);
+            t.AddGlobalUsings(compilation, t.GlobalEntities.Usings);
 
             t.GlobalEntities.Members.Add(t.GenerateGlobalClass(globalClassName, false, true));
             var eof = SyntaxFactory.Token(SyntaxKind.EndOfFileToken);
@@ -2285,7 +2413,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             generated.Free();
 
             // Add: using static Functions
-            AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
+            //AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
 
             // Add: using System
             AddUsingWhenMissing(GlobalEntities.Usings, "System", false, null);
@@ -2458,7 +2586,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             generated.Free();
 
             // Add: using static Functions
-            AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
+            // AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
 
             // Add: using System
             AddUsingWhenMissing(GlobalEntities.Usings, "System", false, null);
@@ -2595,7 +2723,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 GlobalEntities.Members.AddRange(globalTypes);
             }
             // Add: using static Functions
-            AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
+            //AddUsingWhenMissing(GlobalEntities.Usings, this.GlobalClassName, true, null);
 
             // Add: using System
             AddUsingWhenMissing(GlobalEntities.Usings, "System", false, null);
@@ -2654,7 +2782,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             if (GlobalEntities.GlobalClassMembers.Count > 0)
             {
-                AddUsingWhenMissing(GlobalEntities.Usings, GlobalClassName, true, null);
+                // this is done in the Default Tree now
+                // AddUsingWhenMissing(GlobalEntities.Usings, GlobalClassName, true, null);
                 GlobalEntities.Members.Add(GenerateGlobalClass(GlobalClassName, false, false, GlobalEntities.GlobalClassMembers));
                 GlobalEntities.GlobalClassMembers.Clear();
 

@@ -151,7 +151,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var operand = boundConv.Operand;
                         if (boundConv.Type.IsUsualType() && operand.Type.SpecialType == SpecialType.System_Void)
                         {
-                            var errors = diagnostics.DiagnosticBag.ToReadOnlyAndFree();
+                            var errors = diagnostics.DiagnosticBag.ToReadOnly();
                             diagnostics.Clear();
                             foreach (var error in errors)
                             {

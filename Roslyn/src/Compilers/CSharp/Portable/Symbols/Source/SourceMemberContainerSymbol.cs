@@ -972,7 +972,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 Debug.Assert(instanceInitializers.All(g => !g.IsDefault));
 
                 Debug.Assert(!nonTypeMembers.Any(s => s is TypeSymbol));
+#if !XSHARP
+                // We allow more than one indexer in the type
                 Debug.Assert(haveIndexers == nonTypeMembers.Any(s => s.IsIndexer()));
+#endif
 
                 this.NonTypeMembers = nonTypeMembers;
                 this.StaticInitializers = staticInitializers;
@@ -1264,7 +1267,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 Debug.Assert(s_emptyTypeMembers.Count == 0);
                 return symbols.Count > 0 ?
 #if XSHARP
-					symbols.ToDictionary(s => s.Name, XSharpString.Comparer) : 
+					symbols.ToDictionary(s => s.Name, XSharpString.Comparer) :
 #else
                     symbols.ToDictionary(s => s.Name, StringOrdinalComparer.Instance) :
 #endif
@@ -2556,7 +2559,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             else
             {
+#if XSHARP
+                membersByName = membersAndInitializers.NonTypeMembers.ToDictionary(s => s.Name, XSharpString.Comparer);
+#else
                 membersByName = membersAndInitializers.NonTypeMembers.ToDictionary(s => s.Name, StringOrdinalComparer.Instance);
+#endif
 
                 // Merge types into the member dictionary
                 AddNestedTypesToDictionary(membersByName, GetTypeMembersDictionary());
@@ -4778,9 +4785,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        #endregion
+#endregion
 
-        #region Extension Methods
+#region Extension Methods
 
         internal bool ContainsExtensionMethods
         {
@@ -4822,7 +4829,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        #endregion
+#endregion
 
         public sealed override NamedTypeSymbol ConstructedFrom
         {

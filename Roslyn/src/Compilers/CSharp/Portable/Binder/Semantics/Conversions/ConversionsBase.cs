@@ -578,6 +578,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ConversionKind.ImplicitTupleLiteral:
                 case ConversionKind.StackAllocToPointerType:
                 case ConversionKind.StackAllocToSpanType:
+#if XSHARP
+                case ConversionKind.IntPtr:
+#endif
                     return true;
                 default:
                     return false;
